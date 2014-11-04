@@ -1,9 +1,9 @@
 ##pyayaBot_main.py
 ##The main body of a Twitch bot which listens for IRC Bodys.
 
-##TODO
-##Objectify Bodys
-##Add ability to print a single user object
+## TODO
+## Objectify Messages [ DONE ] 
+## Add method to print a single Eser object
 
 ##Socket library
 import socket, re, sys, time, os, subprocess
@@ -29,7 +29,7 @@ class Bot():
 		self.parseConfigFile(config_path)
 		
 		## Initialize the LogFairy object using the log directory.
-		self.log = LogFairy(self.log_dir)
+		self.log = LogFairy(self.channel, self.log_dir)
 		
 		## Call the method to connect to the Twitch.TV IRC server.
 		self.connectToTwitch()
@@ -49,13 +49,43 @@ class Bot():
 
 	## listenLoop - This method enters an infinite loop and listens for text from the Twitch.TV IRC Server.
 	def listenLoop(self):
-			while (1):
-				## Split data received from the Twitch.TV IRC server into lines.
-				read_buffer = self.twitch.recv(4096)
-				temp = read_buffer.split("\n", 10000)
-				readbuffer = temp.pop()
-				for line in temp:
-					print line + "\r\n"
+		while (1):
+			## Split data received from the Twitch.TV IRC server into lines.
+			self.read_buffer = self.twitch.recv(4096)
+			self.temp = self.read_buffer.split("\n", 10000)
+			self.readbuffer = self.temp.pop()
+			for line in self.temp:
+				print line
+				self.parseLineFromTwitch(line)
+				
+	## parseLineFromTwitch - This method will parse a line of text form the Twitch.TV IRC server, splitting it up and determining its log type and corresponding values.
+	## line                - The message sent from listenLoop().
+	def parseLineFromTwitch(self, line):
+		line_parts = line.split(" ", 3)
+		if (re.match("[0-9]{3}", line_parts[1])):
+			type = line_parts[1]
+			body = line_parts[3].rstrip()
+			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))
+		elif (line_parts[1] == "JOIN"):
+			type = line_parts[1]
+			body = line_parts[0].rstrip()
+			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))
+		elif (line_parts[1] == "PART"):
+			type = line_parts[1]
+			body = line_parts[0].rstrip()
+			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))
+		elif (line_parts[1] == "MODE"):
+			type = line_parts[1]
+			body = (line_parts[2] + " " + line_parts[3]).rstrip()
+			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))
+		elif (line_parts[0] == "PING"):
+			type = line_parts[1]
+			body = "N/A"
+			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))	
+		elif (line_parts[1] == "PRIVMSG"):
+			user = line_parts[1]
+			body = line_parts[3].rstrip()
+			self.log.writeToChatLog(self.log.ChatMessage(self.log, user, body))
 
 	## parseConfigFile - This method opens the configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
 	def parseConfigFile(self, config_path):
@@ -100,7 +130,7 @@ class LogFairy():
 	## self.chat_log   - A handle to a file located at the absolute or relative path to the chat log file. (IRC chat Bodys)
 	## self.system_log - A handle to a file located at the absolute or relative path to the system log file.
 	## log_dir         - The directory in which to save the three log files.
-	def __init__(self, log_dir):
+	def __init__(self, channel, log_dir):
 		self.date, self.time = self.getCurrentDateAndTime()
 
 		## Verify the log directory specified in the config file exists. If it doesn't try to create it.
@@ -118,7 +148,7 @@ class LogFairy():
 			
 		## Open the handle to the system log file, write the header row and log the action to the system log.
 		try:
-			self.system_log = open(log_dir + "\\pyayaBot_systemlog_" + self.date + "_" + self.time + ".csv", "w+")
+			self.system_log = open(log_dir + "\\pyayaBot_" + channel + "_systemlog_" + self.date + "_" + self.time + ".csv", "w+")
 		except IOError:
 			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "\\pyayaBot_systemlog_" + self.date + "_" + self.time + ".csv.\""
 			sys.exit()
@@ -128,7 +158,7 @@ class LogFairy():
 
 		## Open the handle to the chat log file, write the header row and log the action to the system log.		
 		try:
-			self.chat_log = open(log_dir + "\\pyayaBot_chatlog_" + self.date + "_" + self.time + ".csv", "w+")
+			self.chat_log = open(log_dir + "\\pyayaBot_" + channel + "_chatlog_" + self.date + "_" + self.time + ".csv", "w+")
 		except IOError:
 			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "\\pyayaBot_chatlog_" + self.date + "_" + self.time + ".csv.\""
 			sys.exit()
@@ -138,14 +168,14 @@ class LogFairy():
 		
 		## Open the handle to the IRC log file, write the header row and log the action to the system log.		
 		try:
-			self.irc_log = open(log_dir + "\\pyayaBot_irclog_" + self.date + "_" + self.time + ".csv", "w+")
+			self.irc_log = open(log_dir + "\\pyayaBot_" + channel + "_irclog_" + self.date + "_" + self.time + ".csv", "w+")
 		except IOError:
 			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "\\pyayaBot_irclog_" + self.date + "_" + self.time + ".csv.\""		
 			sys.exit()
 
 		self.irc_log.write("Date,Time,Type,Body\n")
 		self.writeToSystemLog(self.SystemMessage(self, "INFO","IRC LOG CREATED"))
-
+	
 	## getCurrentTimeAndTime - This method returns the current date and time as a tuple of strings..
 	## 0 - The current date.
 	## 1 - The current time to the second.
