@@ -1,0 +1,4 @@
+*.txt
+*.ini
+*.pyc
+.\logs

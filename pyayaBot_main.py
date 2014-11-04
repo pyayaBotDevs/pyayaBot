@@ -3,9 +3,9 @@
 
 ## TODO
 ## Objectify Messages [ DONE ] 
-## Add method to print a single Eser object
+## Add method to print a single User object
 
-##Socket library
+## Imports
 import socket, re, sys, time, os, subprocess
 
 ## Bot - This class contains the most basic operations of pyayaBot.
@@ -57,7 +57,40 @@ class Bot():
 			for line in self.temp:
 				print line
 				self.parseLineFromTwitch(line)
-				
+
+	## parseConfigFile - This method opens the configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
+	def parseConfigFile(self, config_path):
+		try:
+			config_file = open(config_path, "r")
+		except IOError:
+			print "    pyayaBot.Bot.parseConfigFile(): Unable to open file: \"" + config_path + ".\""
+			sys.exit()
+			
+		for line in config_file:
+			self.line_list = line.split("=", 1)
+			if (self.line_list[0] == "HOST"):
+				self.host = self.line_list[1].rstrip()
+			elif (self.line_list[0] == "PORT"):
+				self.port = int(self.line_list[1].rstrip(), base=10)
+			elif (self.line_list[0] == "NICK"):
+				self.nick = self.line_list[1].rstrip()
+				self.ident = self.nick
+			elif (self.line_list[0] == "PASS"):
+				self.oauth = self.line_list[1].rstrip()
+			elif (self.line_list[0] == "CHANNEL"):
+				self.channel = self.line_list[1].rstrip()
+			elif (self.line_list[0] == "LOG_DIR"):
+				self.log_dir = self.line_list[1].rstrip()
+			else:
+				print "    pyayaBot.Bot.parseConfigFile(): Invalid config entry: \"" + self.line_list[0] + ".\""
+		
+		if (self.host == "" or self.port == 0 or self.nick == "" or self.oauth == "" or self.channel == ""):
+			print "    pyayaBot.Bot.parseConfigFile(): One or more configuration entries were not set."
+			print "    Please verify the configuration file's contents and try again."
+			sys.exit()
+		
+		config_file.close()
+			
 	## parseLineFromTwitch - This method will parse a line of text form the Twitch.TV IRC server, splitting it up and determining its log type and corresponding values.
 	## line                - The message sent from listenLoop().
 	def parseLineFromTwitch(self, line):
@@ -86,38 +119,6 @@ class Bot():
 			user = line_parts[1]
 			body = line_parts[3].rstrip()
 			self.log.writeToChatLog(self.log.ChatMessage(self.log, user, body))
-
-	## parseConfigFile - This method opens the configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
-	def parseConfigFile(self, config_path):
-		try:
-			config_file = open(config_path, "r")
-		except IOError:
-			print "    pyayaBot.Bot.parseConfigFile(): Unable to open file: \"" + c + ".\""
-		
-		for line in config_file:
-			self.line_list = line.split("=", 1)
-			if (self.line_list[0] == "HOST"):
-				self.host = self.line_list[1].rstrip()
-			elif (self.line_list[0] == "PORT"):
-				self.port = int(self.line_list[1].rstrip(), base=10)
-			elif (self.line_list[0] == "NICK"):
-				self.nick = self.line_list[1].rstrip()
-				self.ident = self.nick
-			elif (self.line_list[0] == "PASS"):
-				self.oauth = self.line_list[1].rstrip()
-			elif (self.line_list[0] == "CHANNEL"):
-				self.channel = self.line_list[1].rstrip()
-			elif (self.line_list[0] == "LOG_DIR"):
-				self.log_dir = self.line_list[1].rstrip()
-			else:
-				print "    pyayaBot.Bot.parseConfigFile(): Invalid config entry: \"" + self.line_list[0] + ".\""
-		
-		if (self.host == "" or self.port == 0 or self.nick == "" or self.oauth == "" or self.channel == ""):
-			print "    pyayaBot.Bot.parseConfigFile(): One of more configuration entries were not set."
-			print "    Please verify the configuration file's contents and try again."
-			sys.exit()
-		
-		config_file.close()
 
 ## End of Bot class.
 
@@ -154,7 +155,7 @@ class LogFairy():
 			sys.exit()
 
 		self.system_log.write("Date,Time,Level,Body\n")
-		self.writeToSystemLog(self.SystemMessage(self, "INFO","SYSTEM LOG CREATED"))
+		self.writeToSystemLog(self.SystemMessage(self, "INFO", "SYSTEM LOG CREATED"))
 
 		## Open the handle to the chat log file, write the header row and log the action to the system log.		
 		try:
@@ -164,7 +165,7 @@ class LogFairy():
 			sys.exit()
 			
 		self.chat_log.write("Date,Time,User,Body\n")
-		self.writeToSystemLog(self.SystemMessage(self, "INFO","CHAT LOG CREATED"))
+		self.writeToSystemLog(self.SystemMessage(self, "INFO", "CHAT LOG CREATED"))
 		
 		## Open the handle to the IRC log file, write the header row and log the action to the system log.		
 		try:
@@ -174,9 +175,9 @@ class LogFairy():
 			sys.exit()
 
 		self.irc_log.write("Date,Time,Type,Body\n")
-		self.writeToSystemLog(self.SystemMessage(self, "INFO","IRC LOG CREATED"))
+		self.writeToSystemLog(self.SystemMessage(self, "INFO", "IRC LOG CREATED"))
 	
-	## getCurrentTimeAndTime - This method returns the current date and time as a tuple of strings..
+	## getCurrentTimeAndTime - This method returns the current date and time as a couple of strings..
 	## 0 - The current date.
 	## 1 - The current time to the second.
 	def getCurrentDateAndTime(self):
@@ -270,9 +271,19 @@ class User():
 		self.last_command_time  = 0
 		self.spam_count         = 1
 		self.timeout_count      = 0
+		self.checkIfBroadcaster()
 		self.checkIfOp()
-		self.checkIfAdmin()
-	
+
+	##checkIfAdmin - Checks whether this user is an administrator.
+	def checkIfBroadcaster(self):
+		if (self.name == CHANNEL[1:] or self.name == "albinohat"):
+			self.bool_isadmin = 1
+			admin_list.append(self.name)
+		#if(self.bool_isadmin == 1):
+		#	print "    In User class Object! " + self.name + " is an admin!\n"
+		#else:
+		#	print "    In User class Object! " + self.name + " is not an admin!\n"
+
 	##checkIfOp - Checks whether this user is an operator.
 	def checkIfOp(self):
 		for op in op_list:
@@ -283,17 +294,7 @@ class User():
 		#	print "    In User class Object! " + self.name + " is an op!\n"
 		#else:
 		#	print "    In User class Object! " + self.name + " is not an op!\n"
-
-	##checkIfAdmin - Checks whether this user is an administrator.
-	def checkIfAdmin(self):
-		if (self.name == CHANNEL[1:] or self.name == "albinohat"):
-			self.bool_isadmin = 1
-			admin_list.append(self.name)
-		#if(self.bool_isadmin == 1):
-		#	print "    In User class Object! " + self.name + " is an admin!\n"
-		#else:
-		#	print "    In User class Object! " + self.name + " is not an admin!\n"
-			
+		
 	##updateTimer - Updates the last time a user successfully issued a bot command.
 	##              Also resets spam coutner. This is used for flood protection.
 	def updateTimer(self):
