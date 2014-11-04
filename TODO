@@ -1,0 +1,11 @@
+Long-Term Goals
+pyayaBot instance will be hosted off of a test server hosted by Albinohat.
+Users of Twitch.tv will be able to spin up instances of pyayaBot from a Twitch chatroom.
+
+[Albinohat]
+User Management in pyayabot_main.py [IN PROGRESS]
+Deploy a test server.
+Create user account for Devezich on the test server.
+
+[Devezich]
+Create a simple bot to deploy new instances of pyayaBot.

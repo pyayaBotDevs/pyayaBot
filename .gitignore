@@ -2,3 +2,4 @@
 *.ini
 *.pyc
 .\logs
+logs/
