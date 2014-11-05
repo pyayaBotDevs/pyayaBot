@@ -4,7 +4,8 @@ Users of Twitch.tv will be able to spin up instances of pyayaBot from a Twitch c
 
 [Albinohat]
 User Management in pyayabot_main.py [IN PROGRESS]
-Deploy a test server.
+Write main deployment script.
+Deploy a test server. (Linux)
 Create user account for Devezich on the test server.
 
 [Devezich]

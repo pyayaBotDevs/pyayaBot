@@ -3,28 +3,46 @@
 
 ## TODO
 ## Objectify Messages [ DONE ] 
-## Add method to print a single User object
+## Write method to allow bot to send chat.
+## Reimplement user management. [ IN-PROGRESS ]
+## Insert system logging into existing methods.
+## Implement 4th log for bans/timeouts.
 
 ## Imports
 import socket, re, sys, time, os, subprocess
 
 ## Bot - This class contains the most basic operations of pyayaBot.
 class Bot():
-	## __init__      - This method sets up the bot using a configuration file, connects to the Twitch IRC server and starts the main listening loop.
-	## self.host     - The IP of the Twitch.TV IRC server.
-	## self.port     - The port of the Twitch.TV IRC server.
-	## self.nick     - The nickname (username) of the Bot instance.
-	## self.oauth    - The password (OAuth token) of the Bot instance.
-	## self.ident    - The identity of the Bot instance. (Must be the same as nickname)
-	## self.realname - Used as a credits field. Please always initialize to give credits to Albinohat.
-	## self.channel  - The chatroom the bot will join. A single bot instance must join only one channel at a time. (For now)
-	## self.log_dir  - The absolute or relative paths to the directory in which log files will be stored.				
-	## self.log      - A LogFairy object which will handle writing out log entries.
-	## self.twitch   - A socket object which will contain the IP/port pairs between the local machine and the Twitch.TV IRC server.
-	## config_path   - The absolute or relative path to the configuration file to initialize the Bot instance.
-	def __init__(self, config_path):
-		self.realname = "pyayaBot by https://github.com/pyayaBotDevs"
-			
+	## __init__            - This method sets up the bot using a configuration file, connects to the Twitch IRC server and starts the main listening loop.
+	## self.host           - The IP of the Twitch.TV IRC server.
+	## self.port           - The port of the Twitch.TV IRC server.
+	## self.nick           - The nickname (username) of the Bot instance.
+	## self.oauth          - The password (OAuth token) of the Bot instance.
+	## self.ident          - The identity of the Bot instance. (Must be the same as nickname)
+	## self.realname       - Used as a credits field. Please always initialize to give credits to Albinohat.
+	## self.channel        - The channel the bot will join. A single bot instance must join only one channel at a time. (For now)
+	## self.log_dir        - The absolute or relative paths to the directory in which log files will be stored.				
+	## self.syslog_bitmask - A bit mask supplied as a list of bools which determines what types of log entries to write.
+	##                     Index - ValueError
+	##					   0 - System > INFO
+	##					   1 - System > WARNING
+	##					   2 - System > ERROR
+	##					   3 - System > DEBUG
+
+	## self.log            - A LogFairy object which will handle writing out log entries.
+	## self.twitch         - A socket object which will contain the IP/port pairs between the local machine and the Twitch.TV IRC server.
+	## self.list_of_users  - A list of User objects to track users in a channel.
+	## self.list_of_admins - A list of strings containing the usernames of admins. (Broadcast + albinohat)
+	## self.list_of_ops    - A list of strings containing the usernames of channel operators.
+	## config_path         - The absolute or relative path to the configuration file to initialize the Bot instance.
+	def __init__(self, config_path, log_bitmask):
+		## Initialize the credits, logging bitmask and lists of users and ops.
+		self.realname       = "pyayaBot by https://github.com/pyayaBotDevs"
+		self.log_bitmask    = log_bitmask
+		self.list_of_users  = []
+		self.list_of_admins = []
+		self.list_of_ops    = []
+
 		## Call the method to parse the configuration file.
 		self.parseConfigFile(config_path)
 		
@@ -36,6 +54,29 @@ class Bot():
 		
 		## Call the method to listen for messages from the Twitch.TV IRC server.
 		self.listenLoop()
+	
+	## addOp - Adds a user to the list of operators (mods).
+	## n     - The username of the user to add to the list.
+	def addOp(self, n):
+		self.list_of_ops.append(n)
+		
+	## addUser - Adds the specified username to the list of operators (mods).
+	## u       - A User object.
+	def addUser(self, u):
+		self.list_of_users.append(u)
+	
+	## checkIfKnownUser - This method will loop through the list of User objects.
+	## It returns 0 if the user is not tracked in the list of users.
+	## It returns 1 if the user is tracked in the list of users.
+	## n                - The username of someone in the channel to check.
+	def checkIfKnownUser(self, n):
+		bool_known = 0
+		for user in self.list_of_users:
+			if (n == user.name):
+				bool_known = 1
+				break
+		
+		return bool_known
 		
 	## connectToTwitch - This method connects to the Twitch IRC server and joins the configured channel.
 	def connectToTwitch(self):
@@ -45,19 +86,22 @@ class Bot():
 		self.twitch.send("PASS %s\r\n" % self.oauth) 
 		self.twitch.send("NICK %s\r\n" % self.nick)
 		self.twitch.send("USER %s %s bla :%s\r\n" % (self.ident, self.host, self.realname))
-		self.twitch.send("JOIN %s\r\n" % self.channel)
-
+		self.twitch.send("JOIN #%s\r\n" % self.channel)
+		
+		self.log.writeToSystemLog(self.log.SystemMessage(self.log, "INFO", "Successfully connected to Twitch.TV IRC Server. (" + self.host + " Port " + str(self.port) + ")"))
+		
 	## listenLoop - This method enters an infinite loop and listens for text from the Twitch.TV IRC Server.
 	def listenLoop(self):
+		read_buffer = ""
 		while (1):
 			## Split data received from the Twitch.TV IRC server into lines.
-			self.read_buffer = self.twitch.recv(4096)
-			self.temp = self.read_buffer.split("\n", 10000)
-			self.readbuffer = self.temp.pop()
-			for line in self.temp:
-				print line
-				self.parseLineFromTwitch(line)
-
+			read_buffer = self.twitch.recv(4096)
+			temp = read_buffer.split("\n", 10000)
+			for line in temp:
+				if (line != "" and line != "\n" and line != "\r\n"):
+					print line
+					self.parseLineFromTwitch(line.rstrip())
+		
 	## parseConfigFile - This method opens the configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
 	def parseConfigFile(self, config_path):
 		try:
@@ -99,27 +143,134 @@ class Bot():
 			type = line_parts[1]
 			body = line_parts[3].rstrip()
 			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))
+		
 		elif (line_parts[1] == "JOIN"):
 			type = line_parts[1]
 			body = line_parts[0].rstrip()
 			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))
+			
+			## Check if the user is tracked. If not, add the user to the list.
+			if (self.checkIfKnownUser(body) == 0):
+				self.addUser(self.User(self, body))
+				
 		elif (line_parts[1] == "PART"):
 			type = line_parts[1]
 			body = line_parts[0].rstrip()
 			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))
+			
+			## Remove the user from the list of tracked users.
+			self.removeUser(body)
+		
 		elif (line_parts[1] == "MODE"):
 			type = line_parts[1]
-			body = (line_parts[2] + " " + line_parts[3]).rstrip()
+			body = line_parts[3].rstrip()
+			
+			mode_list = body.split(" ", 1)
+			if (mode_list[0] == "+o"):
+				self.addOp(mode_list[1])
+			elif (mode_list[0] == "-o"):
+				self.removeOp(mode_list[1])
+			else:
+				self.log.writeToSystemLog(self.log.SystemMessage(self.log, "WARNING", "Invalid MODE operation: \"" + mode_list[0] + ".\""))
+			
 			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))
+		
 		elif (line_parts[0] == "PING"):
+			self.twitch.send("PONG + " + line + "\r\n")
+			
 			type = line_parts[1]
 			body = "N/A"
 			self.log.writeToIRCLog(self.log.IRCMessage(self.log, type, body))	
+	
 		elif (line_parts[1] == "PRIVMSG"):
-			user = line_parts[1]
+			user = line_parts[0]
 			body = line_parts[3].rstrip()
 			self.log.writeToChatLog(self.log.ChatMessage(self.log, user, body))
+			
+			## Check if the user is tracked. If not, add the user to the list.
+			if (self.checkIfKnownUser(user) == 0):
+				self.addUser(self.User(self, user))
+			
+			## Check if user is an op.
+			for each in self.list_of_users:
+				if (each.name == user):
+					each.checkIfOp()
+		
+		else:
+			self.log.writeToSystemLog(self.log.SystemMessage(self.log, "WARNING", "Unknown message type received from Twitch.TV IRC Server."))
+			
+	## removeOp - Removes the username specified from the list of operators (mods).
+	## n        - The username of the user to remove.
+	def removeOp(self, n):
+		self.list_of_ops.remove(n)
+	
+	## removeUser - Removes the user with the username specified from the list of users.
+	## n        - The username of the user to remove.	
+	def removeUser(self, n):
+		for user in self.list_of_users:
+			if (user.name == n):
+				self.list_of_users.remove(user.n)
+				break
 
+	## sendMessage - Sends a message to the twitch server.
+	## t           - The text to be sent as a string.
+	def sendMessage(self, t):
+		self.twitch.send("PRIVMSG #" + self.channel + " " + t + "\r\n")
+	
+	## Bot.User class - Contains information and methods for users in chat.
+	class User():
+		## __init__               - Initialize the attributes of a User object.
+		## self.parent            - A handle to the parent Bot object.
+		## self.name              - The username of the user.
+		## self.bool_isop         - A boolean tracking whether the user is a channel operator.
+		## self.bool_isadmin      - A boolean tracking whether the user is the broadcaster. (stream owner)
+		## self.last_command_time - The number of seconds since the last bot command was issued.
+		## self.spam_count        - A counter which keeps track of the number of times a user has spammed. (Sent bot commands too quickly)
+		## self.timeout_count     - A counter which keeps track of how many times the user has been timed out in chat.
+		
+		def __init__(self, parent, name):
+			self.parent             = parent
+			self.name               = name
+			self.bool_isop          = 0
+			self.bool_isbroadbaster = 0		
+			self.last_command_time  = 0
+			self.spam_count         = 1
+			self.timeout_count      = 0
+			self.checkIfBroadcaster()
+			self.checkIfOp()
+			self.printUser()
+		
+		## checkIfBroadcaster - Checks whether this user is an administrator.
+		def checkIfBroadcaster(self):
+			if ((self.parent.channel in self.name)):
+				self.bool_isbroadbaster = 1
+				self.parent.list_of_admins.append(self.name)
+
+		## checkIfOp - Checks whether this user is an operator.
+		def checkIfOp(self):
+			for op in self.parent.list_of_ops:
+				if (op in self.name):
+					self.bool_isop = 1
+					break
+					
+		## updateTimer - Updates the last time a user successfully issued a bot command.
+		## Also resets spam counter. This is used for flood protection.
+		def updateTimer(self):
+			self.last_command_time = time.time()
+			self.spam_count        = 0
+
+		## printUser - Prints the user's public attributes.
+		def printUser(self):
+			print "    Bot.User.printUser()"
+			print "        self.name: " + self.name
+			print "        self.bool_isop: " + str(self.bool_isop)
+			print "        self.bool_isbroadbaster: " + str(self.bool_isbroadbaster)		
+			print "        self.last_command_time: " + str(self.last_command_time)
+			print "        self.spam_count: " + str(self.spam_count)
+			print "        self.timeout_count: " + str(self.timeout_count) + "\n"
+
+	## End of Bot.User class
+		
 ## End of Bot class.
 
 ## LogFairy - This class contains code for writing chat and bot activities to a log.
@@ -149,9 +300,9 @@ class LogFairy():
 			
 		## Open the handle to the system log file, write the header row and log the action to the system log.
 		try:
-			self.system_log = open(log_dir + "\\pyayaBot_" + channel + "_systemlog_" + self.date + "_" + self.time + ".csv", "w+")
+			self.system_log = open(log_dir + "/pyayaBot_" + channel + "_systemlog_" + self.date + "_" + self.time + ".csv", "w+")
 		except IOError:
-			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "\\pyayaBot_systemlog_" + self.date + "_" + self.time + ".csv.\""
+			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "/pyayaBot_systemlog_" + self.date + "_" + self.time + ".csv.\""
 			sys.exit()
 
 		self.system_log.write("Date,Time,Level,Body\n")
@@ -159,9 +310,9 @@ class LogFairy():
 
 		## Open the handle to the chat log file, write the header row and log the action to the system log.		
 		try:
-			self.chat_log = open(log_dir + "\\pyayaBot_" + channel + "_chatlog_" + self.date + "_" + self.time + ".csv", "w+")
+			self.chat_log = open(log_dir + "/pyayaBot_" + channel + "_chatlog_" + self.date + "_" + self.time + ".csv", "w+")
 		except IOError:
-			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "\\pyayaBot_chatlog_" + self.date + "_" + self.time + ".csv.\""
+			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "/pyayaBot_chatlog_" + self.date + "_" + self.time + ".csv.\""
 			sys.exit()
 			
 		self.chat_log.write("Date,Time,User,Body\n")
@@ -169,9 +320,9 @@ class LogFairy():
 		
 		## Open the handle to the IRC log file, write the header row and log the action to the system log.		
 		try:
-			self.irc_log = open(log_dir + "\\pyayaBot_" + channel + "_irclog_" + self.date + "_" + self.time + ".csv", "w+")
+			self.irc_log = open(log_dir + "/pyayaBot_" + channel + "_irclog_" + self.date + "_" + self.time + ".csv", "w+")
 		except IOError:
-			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "\\pyayaBot_irclog_" + self.date + "_" + self.time + ".csv.\""		
+			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "/pyayaBot_irclog_" + self.date + "_" + self.time + ".csv.\""		
 			sys.exit()
 
 		self.irc_log.write("Date,Time,Type,Body\n")
@@ -184,19 +335,19 @@ class LogFairy():
 		return time.strftime("%Y-%m-%d", time.localtime()), time.strftime("%H-%M-%S", time.localtime())
 	
 	## writeToChatLog - Writes an entry to the chat log file.
-	## message - A ChatMessage object containing the values to write into the chat log.
-	def writeToChatLog(self, message):
-		self.chat_log.write(message.date + "," + message.time + "," + message.user + "," + message.body + "\n")
+	## m              - A ChatMessage object containing the values to write into the chat log.
+	def writeToChatLog(self, m):
+		self.chat_log.write(m.date + "," + m.time + "," + m.user + "," + m.body + "\n")
 
 	## writeToIRCLog - Writes an entry to the IRC log file.
-	## message - An IRCMessage object containing the values to write into the IRC log.
-	def writeToIRCLog(self, message):
-		self.irc_log.write(message.date + "," + message.time + "," + message.type + "," + message.body + "\n")
+	## m             - An IRCMessage object containing the values to write into the IRC log.
+	def writeToIRCLog(self, m):
+		self.irc_log.write(m.date + "," + m.time + "," + m.type + "," + m.body + "\n")
 
 	## writeToSystemLog - Writes an entry to the IRC log file.
-	## message - A SystemMessage object containing the values to write into the system log.
-	def writeToSystemLog(self, message):
-		self.system_log.write(message.date + "," + message.time + "," + message.level + "," + message.body + "\n")
+	## m                - A SystemMessage object containing the values to write into the system log.
+	def writeToSystemLog(self, m):
+		self.system_log.write(m.date + "," + m.time + "," + m.level + "," + m.body + "\n")
 
 	## LogFairy.ChatMessage class - This class describes an object which contains information about system, IRC and chat Bodys.
 	class ChatMessage():
@@ -221,7 +372,7 @@ class LogFairy():
 		## __init__ - This method initializes the IRCMessage object.
 		## self.date - The current date.
 		## self.time - The current time.
-		## self.type - The type of message. (###, NAMES, JOIN, PART, MOD, DEMOD)
+		## self.type - The type of message. (###, JOIN, PART, MODE, PRIVMSG)
 		## self.body - The body of the message.
 		## parent    - A handle to the parent LogFairy instance calling method.
 		def __init__(self, parent, type, Body):
@@ -239,7 +390,7 @@ class LogFairy():
 		## __init__   - This method initializes the IRCMessage object.
 		## self.date  - The current date.
 		## self.time  - The current time.
-		## self.level - The level (Severity) of the message. (INFO, WARNING, ERROR)
+		## self.level - The level (Severity) of the message. (INFO, WARNING, DEBUG, ERROR)
 		## self.body  - The body of the message.
 		## parent     - A handle to the parent LogFairy instance calling method.	
 		def __init__(self, parent, level, Body):
@@ -253,64 +404,3 @@ class LogFairy():
 	## End of LogFairy.SystemMessage class
 		
 ## End of LogFairy class
-
-##User class - Contains information and methods for users in chat.
-class User():
-	##__init__ - Initialize the attributes of a User object.
-	## self.name - The username of the user.
-	## self.bool_isop - A boolean tracking whether the user is a channel operator.
-	## self.bool_isadmin - A boolean tracking whether the user is the broadcaster. (stream owner)
-	## self.last_command_time - The number of seconds since the last bot command was issued.
-	## self.spam_count - A counter which keeps track of the number of times a user has spammed. (Sent bot commands too quickly)
-	## self.timeout_count - A counter which keeps track of how many times the user has been timed out in chat.
-	def __init__(self, name):
-		#print "        In User class Object! Hit __init__\n"
-		self.name               = name
-		self.bool_isop          = 0
-		self.bool_isbroadbaster = 0		
-		self.last_command_time  = 0
-		self.spam_count         = 1
-		self.timeout_count      = 0
-		self.checkIfBroadcaster()
-		self.checkIfOp()
-
-	##checkIfAdmin - Checks whether this user is an administrator.
-	def checkIfBroadcaster(self):
-		if (self.name == CHANNEL[1:] or self.name == "albinohat"):
-			self.bool_isadmin = 1
-			admin_list.append(self.name)
-		#if(self.bool_isadmin == 1):
-		#	print "    In User class Object! " + self.name + " is an admin!\n"
-		#else:
-		#	print "    In User class Object! " + self.name + " is not an admin!\n"
-
-	##checkIfOp - Checks whether this user is an operator.
-	def checkIfOp(self):
-		for op in op_list:
-			if (self.name == op):
-				self.bool_isop == 1
-				break
-		#if(self.bool_isop == 1):
-		#	print "    In User class Object! " + self.name + " is an op!\n"
-		#else:
-		#	print "    In User class Object! " + self.name + " is not an op!\n"
-		
-	##updateTimer - Updates the last time a user successfully issued a bot command.
-	##              Also resets spam coutner. This is used for flood protection.
-	def updateTimer(self):
-		self.last_command_time = time.time()
-		self.spam_count        = 0
-
-	##printUser - Prints the user's public attributes.
-	def printUser(self):
-		print "        In User.printUser"
-		print "            self.name: " + self.name
-		print "            self.bool_isop: " + str(self.bool_isop)
-		print "            self.bool_isadmin: " + str(self.bool_isadmin)		
-		print "            self.last_command_time: " + str(self.last_command_time)
-		print "            self.spam_count: " + str(self.spam_count)
-		print "            self.timeout_count: " + str(self.timeout_count) + "\n"
-
-## End of User class
-
-## End of pyayaBot_main.py
