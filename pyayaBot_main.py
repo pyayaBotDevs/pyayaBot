@@ -1,61 +1,78 @@
 ##pyayaBot_main.py
-##The main body of a Twitch bot which listens for IRC Bodys.
+##The main body of a Twitch bot which listens for IRC Messages and offers features from the pyayaBot_features module.
 
 ## TODO
 ## Objectify Messages [ DONE ] 
-## Write method to allow bot to send chat.
+## Write method to allow bot to send chat messages. [ DONE ]
 ## Reimplement user management. [ IN-PROGRESS ]
-## Insert system logging into existing methods.
+## Reimplement the admin list. [ DONE ]
+## Implement system logging bitmask. [ DONE ]
+## Implement feature sets into the __init__ of Bot class. [ DONE ]
+## Update configuration file format to support feature sets and comments. [ DONE ]
+## Insert system logging into existing methods. [ IN-PROGRESS ]
+## Insert IRC logging into existing methods. [ DONE ]
+## Insert chat logging into existing methods. [ DONE ]
+## Insert debug logging into existing methods.
 ## Implement 4th log for bans/timeouts.
 
 ## Imports
-import socket, re, sys, time, os, subprocess
+import pyayaBot_featureSets, socket, re, sys, time, os, subprocess
 
 ## Bot - This class contains the most basic operations of pyayaBot.
 class Bot():
-	## __init__            - This method sets up the bot using a configuration file, connects to the Twitch IRC server and starts the main listening loop.
-	## self.host           - The IP of the Twitch.TV IRC server.
-	## self.port           - The port of the Twitch.TV IRC server.
-	## self.nick           - The nickname (username) of the Bot instance.
-	## self.oauth          - The password (OAuth token) of the Bot instance.
-	## self.ident          - The identity of the Bot instance. (Must be the same as nickname)
-	## self.realname       - Used as a credits field. Please always initialize to give credits to Albinohat.
-	## self.channel        - The channel the bot will join. A single bot instance must join only one channel at a time. (For now)
-	## self.log_dir        - The absolute or relative paths to the directory in which log files will be stored.				
-	## self.syslog_bitmask - A bit mask supplied as a list of bools which determines what types of log entries to write.
-	##                     Index - ValueError
-	##					   0 - System > INFO
-	##					   1 - System > WARNING
-	##					   2 - System > ERROR
-	##					   3 - System > DEBUG
-
-	## self.log            - A LogFairy object which will handle writing out log entries.
-	## self.twitch         - A socket object which will contain the IP/port pairs between the local machine and the Twitch.TV IRC server.
-	## self.list_of_users  - A list of User objects to track users in a channel.
-	## self.list_of_admins - A list of strings containing the usernames of admins. (Broadcast + albinohat)
-	## self.list_of_ops    - A list of strings containing the usernames of channel operators.
-	## config_path         - The absolute or relative path to the configuration file to initialize the Bot instance.
-	def __init__(self, config_path, log_bitmask):
+	## __init__                  - This method sets up the bot using a configuration file, connects to the Twitch IRC server and starts the main listening loop.
+	## self.host                 - The IP of the Twitch.TV IRC server.
+	## self.port                 - The port of the Twitch.TV IRC server.
+	## self.nick                 - The nickname (username) of the Bot instance.
+	## self.oauth                - The password (OAuth token) of the Bot instance.
+	## self.ident                - The identity of the Bot instance. (Must be the same as nickname)
+	## self.realname             - Used as a credits field. Please always initialize to give credits to Albinohat.
+	## self.channel              - The channel the bot will join. A single bot instance must join only one channel at a time. (For now)
+	## self.log_dir              - The absolute or relative paths to the directory in which log files will be stored.				
+	## self.syslog_bitlist       - A bit mask supplied as a list of bools which determines what types of log entries to write.
+	##                     Index - Value
+	##					       0 - System > INFO
+	##					       1 - System > WARNING
+	##					       2 - System > ERROR
+	##					       3 - System > DEBUG
+	## self.log                  - A LogFairy object which will handle writing out log entries.
+	## self.twitch               - A socket object which will contain the IP/port pairs between the local machine and the Twitch.TV IRC server.
+	## self.list_of_feature_sets - A list of strings denoting which feature	sets the bot will use.
+	## self.list_of_users        - A list of User objects to track users in a channel.
+	## self.list_of_admins       - A list of strings containing the usernames of admins. (Broadcast + albinohat)
+	## self.list_of_ops          - A list of strings containing the usernames of channel operators.
+	## config_path               - The absolute or relative path to the configuration file to initialize the Bot instance.
+	## syslog_bitlist            - The list of binary values controlling which system logging types are enabled.
+	def __init__(self, config_path, syslog_bitlist):
 		## Initialize the credits, logging bitmask and lists of users and ops.
-		self.realname       = "pyayaBot by https://github.com/pyayaBotDevs"
-		self.log_bitmask    = log_bitmask
-		self.list_of_users  = []
-		self.list_of_admins = []
-		self.list_of_ops    = []
+		self.realname             = "pyayaBot by https://github.com/pyayaBotDevs"
+		self.syslog_bitlist       = syslog_bitlist
+		self.list_of_feature_sets = []
+		self.list_of_users        = []
+		self.list_of_admins       = []
+		self.list_of_ops          = []
 
 		## Call the method to parse the configuration file.
 		self.parseConfigFile(config_path)
 		
 		## Initialize the LogFairy object using the log directory.
-		self.log = LogFairy(self.channel, self.log_dir)
+		self.log = LogFairy(self.channel, self.log_dir, self.syslog_bitlist)
 		
 		## Call the method to connect to the Twitch.TV IRC server.
 		self.connectToTwitch()
 		
+		## Call the method to initialize the various feature set objects.
+		self.initializeFeatureSets()
+				
 		## Call the method to listen for messages from the Twitch.TV IRC server.
 		self.listenLoop()
 	
-	## addOp - Adds a user to the list of operators (mods).
+	## addAdmin - Adds a username to the list of administrators (Broadcaster + others)
+	## n        - The username of the user to add to the list.
+	def addAdmin(self, n):
+		self.list_of_admins.append(n)
+		
+	## addOp - Adds a username to the list of operators (mods).
 	## n     - The username of the user to add to the list.
 	def addOp(self, n):
 		self.list_of_ops.append(n)
@@ -90,6 +107,18 @@ class Bot():
 		
 		self.log.writeToSystemLog(self.log.SystemMessage(self.log, "INFO", "Successfully connected to Twitch.TV IRC Server. (" + self.host + " Port " + str(self.port) + ")"))
 		
+	## initializeFeatureSets - This method initializes feature set objects.
+	def initializeFeatureSets(self):
+		## Initialize bools to enable or disable feature sets.
+		self.bool_basic_feature_set = 0
+		
+		## Call the methods to initialize the specified feature sets in the list.
+		for fs in self.list_of_feature_sets:
+			## Initialize a BasicFeatureSet instance.
+			if (fs == "BasicFeatureSet"):
+				self.basic_feature_set = pyayaBot_featureSets.BasicFeatureSet(self)
+				self.bool_basic_feature_set = 1
+		
 	## listenLoop - This method enters an infinite loop and listens for text from the Twitch.TV IRC Server.
 	def listenLoop(self):
 		read_buffer = ""
@@ -111,6 +140,9 @@ class Bot():
 			sys.exit()
 			
 		for line in config_file:
+			## Do not parse comment lines.
+			if (line[0] == "#" or line == ""):
+				continue
 			self.line_list = line.split("=", 1)
 			if (self.line_list[0] == "HOST"):
 				self.host = self.line_list[1].rstrip()
@@ -123,6 +155,8 @@ class Bot():
 				self.oauth = self.line_list[1].rstrip()
 			elif (self.line_list[0] == "CHANNEL"):
 				self.channel = self.line_list[1].rstrip()
+			elif (self.line_list[0] == "FEATURESET"):
+				self.list_of_feature_sets.append(self.line_list[1].rstrip())
 			elif (self.line_list[0] == "LOG_DIR"):
 				self.log_dir = self.line_list[1].rstrip()
 			else:
@@ -184,23 +218,32 @@ class Bot():
 	
 		elif (line_parts[1] == "PRIVMSG"):
 			user = line_parts[0]
-			body = line_parts[3].rstrip()
+			body = line_parts[3][1:].rstrip()
 			self.log.writeToChatLog(self.log.ChatMessage(self.log, user, body))
 			
 			## Check if the user is tracked. If not, add the user to the list.
 			if (self.checkIfKnownUser(user) == 0):
 				self.addUser(self.User(self, user))
 			
-			## Check if user is an op.
-			for each in self.list_of_users:
-				if (each.name == user):
-					each.checkIfOp()
-		
+			## Parse the chat message from the user to determine if a command was issued.
+			if (self.bool_basic_feature_set == 1):
+				self.basic_feature_set.parseLineFromChat(user, body)
+			
 		else:
 			self.log.writeToSystemLog(self.log.SystemMessage(self.log, "WARNING", "Unknown message type received from Twitch.TV IRC Server."))
-			
+	
+	## printUsers - Calls the Bot.User.printUser method of each User object.
+	def printUsers(self):
+		for user in self.list_of_users:
+			user.printUser()
+		
+	## removeAdmin - Removes the username specified from the list of administrators (broadcaster + others)
+	## n           - The username to remove.
+	def removeAdmin(self):
+		self.list_of_admins.remove(n)
+		
 	## removeOp - Removes the username specified from the list of operators (mods).
-	## n        - The username of the user to remove.
+	## n        - The username to remove.
 	def removeOp(self, n):
 		self.list_of_ops.remove(n)
 	
@@ -212,12 +255,21 @@ class Bot():
 				self.list_of_users.remove(user.n)
 				break
 
-	## sendMessage - Sends a message to the twitch server.
-	## t           - The text to be sent as a string.
-	def sendMessage(self, t):
-		self.twitch.send("PRIVMSG #" + self.channel + " " + t + "\r\n")
-	
-	## Bot.User class - Contains information and methods for users in chat.
+	## sendChatMessage - Sends a message to the twitch server as well as STDOUT.
+	## t               - The text to be sent as a string.
+	def sendChatMessage(self, t):
+		print ":pyayabot!pyayabot@pyayabot.tmi.twitch.tv PRIVMSG #" + self.channel + " :" + t
+		self.twitch.send("PRIVMSG #" + self.channel + " :" + t + "\r\n")
+		self.log.writeToChatLog(self.log.ChatMessage(self.log, ":pyayabot!pyayabot@pyayabot.tmi.twitch.tv", t))
+		
+	## This method gracefully disconnects the bot from the channel and exits.
+	def shutdownBot(self):
+		self.sendChatMessage("Shutting down...")
+		self.twitch.close()
+		self.log.writeToSystemLog(self.log.SystemMessage(self.log, "INFO", "Bot shutdown via chat."))
+		sys.exit()
+		
+	## Bot.User - Contains information and methods for users in chat.
 	class User():
 		## __init__               - Initialize the attributes of a User object.
 		## self.parent            - A handle to the parent Bot object.
@@ -226,25 +278,40 @@ class Bot():
 		## self.bool_isadmin      - A boolean tracking whether the user is the broadcaster. (stream owner)
 		## self.last_command_time - The number of seconds since the last bot command was issued.
 		## self.spam_count        - A counter which keeps track of the number of times a user has spammed. (Sent bot commands too quickly)
-		## self.timeout_count     - A counter which keeps track of how many times the user has been timed out in chat.
-		
+		## self.timeout_count     - A counter which keeps track of how many times the user has been timed out in chat.		
 		def __init__(self, parent, name):
 			self.parent             = parent
 			self.name               = name
+			self.bool_isadmin       = 0
 			self.bool_isop          = 0
 			self.bool_isbroadbaster = 0		
 			self.last_command_time  = 0
 			self.spam_count         = 1
 			self.timeout_count      = 0
+			
+			## Check the broadcaster, admin and op statuses of the user.
 			self.checkIfBroadcaster()
+			self.checkIfAdmin()
 			self.checkIfOp()
-			self.printUser()
 		
-		## checkIfBroadcaster - Checks whether this user is an administrator.
+		## checkIfAdmin - This method checks whether this user is an administrator.
+		def checkIfAdmin(self):
+			## The broadcaster of a channel is always an administrator.
+			## For debugging purposes, I will always be an administrator.
+			if ("albinohat" in self.name or self.checkIfBroadcaster()):
+				self.bool_isadmin = 1
+				return
+
+			for admin in self.parent.list_of_admins:
+				if (admin in self.name):
+					self.bool_isadmin = 1
+					break
+		
+		## checkIfBroadcaster - Checks whether this user is the broadcaster.
 		def checkIfBroadcaster(self):
 			if ((self.parent.channel in self.name)):
 				self.bool_isbroadbaster = 1
-				self.parent.list_of_admins.append(self.name)
+				self.parent.addAdmin(self.name)
 
 		## checkIfOp - Checks whether this user is an operator.
 		def checkIfOp(self):
@@ -252,17 +319,18 @@ class Bot():
 				if (op in self.name):
 					self.bool_isop = 1
 					break
-					
+									
 		## updateTimer - Updates the last time a user successfully issued a bot command.
 		## Also resets spam counter. This is used for flood protection.
 		def updateTimer(self):
 			self.last_command_time = time.time()
 			self.spam_count        = 0
 
-		## printUser - Prints the user's public attributes.
+		## printUser - Prints the attributes of the Bot.User instance.
 		def printUser(self):
 			print "    Bot.User.printUser()"
 			print "        self.name: " + self.name
+			print "        self.bool_isadmin: " + str(self.bool_isadmin)
 			print "        self.bool_isop: " + str(self.bool_isop)
 			print "        self.bool_isbroadbaster: " + str(self.bool_isbroadbaster)		
 			print "        self.last_command_time: " + str(self.last_command_time)
@@ -282,9 +350,11 @@ class LogFairy():
 	## self.chat_log   - A handle to a file located at the absolute or relative path to the chat log file. (IRC chat Bodys)
 	## self.system_log - A handle to a file located at the absolute or relative path to the system log file.
 	## log_dir         - The directory in which to save the three log files.
-	def __init__(self, channel, log_dir):
+	## syslog_bitlist  - The list of binary values controlling which system logging types are enabled passed in from Bot.__init__().
+	def __init__(self, channel, log_dir, syslog_bitlist):
 		self.date, self.time = self.getCurrentDateAndTime()
-
+		self.syslog_bitlist  = syslog_bitlist
+		
 		## Verify the log directory specified in the config file exists. If it doesn't try to create it.
 		try:
 			if (os.path.isdir(log_dir) == 0):
@@ -347,9 +417,11 @@ class LogFairy():
 	## writeToSystemLog - Writes an entry to the IRC log file.
 	## m                - A SystemMessage object containing the values to write into the system log.
 	def writeToSystemLog(self, m):
-		self.system_log.write(m.date + "," + m.time + "," + m.level + "," + m.body + "\n")
-
-	## LogFairy.ChatMessage class - This class describes an object which contains information about system, IRC and chat Bodys.
+		## Only write the log entry if it is not block by the bitlist.
+		if ((self.syslog_bitlist[0] == "1" and m.level == "INFO") or (self.syslog_bitlist[1] == "1" and m.level == "WARNING") or (self.syslog_bitlist[2] == "1" and m.level == "ERROR") or (self.syslog_bitlist[3] == "1" and m.level == "DEBUG")):
+			self.system_log.write(m.date + "," + m.time + "," + m.level + "," + m.body + "\n")
+			
+	## LogFairy.ChatMessage - Describes an object which contains information about system, IRC and chat Bodys.
 	class ChatMessage():
 		## __init__ - This method initializes the ChatMessage object.
 		## self.date - The current date.
@@ -367,7 +439,7 @@ class LogFairy():
 	
 	## End of LogFairy.ChatMessage class		
 		
-	## LogFairy.IRCMessage class - This class describes an object which contains information about system, IRC and chat Bodys.
+	## LogFairy.IRCMessage - Describes an object which contains information about system, IRC and chat Bodys.
 	class IRCMessage():
 		## __init__ - This method initializes the IRCMessage object.
 		## self.date - The current date.
@@ -385,7 +457,7 @@ class LogFairy():
 	
 	## End of LogFairy.IRCMessage class
 	
-	## LogFairy.SystemMessage class - This class describes an object which contains information about system, IRC and chat Bodys.
+	## LogFairy.SystemMessage - Describes an object which contains information about system, IRC and chat Bodys.
 	class SystemMessage():
 		## __init__   - This method initializes the IRCMessage object.
 		## self.date  - The current date.
