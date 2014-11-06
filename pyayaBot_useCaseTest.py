@@ -4,7 +4,8 @@
 import pyayaBot_main, sys
 
 ## Initialize test variables.
-test_config  = "./config_albinohat.ini"
+test_connection_config = "./connection_config.ini"
+test_channel_config    = "./channel_config_albinohat.ini"
 
 ## This int will be turned a list of binary values to control lagging.
 ## INFO Logging    - Add 8
@@ -18,4 +19,4 @@ test_bitmask = 15
 ## Turn the int given into a list of bools.
 test_bitlist = list(bin(test_bitmask)[2:].zfill(4))
 
-test_pyaya = pyayaBot_main.Bot(test_config, test_bitlist)
+test_pyaya = pyayaBot_main.Bot(test_connection_config, test_channel_config, test_bitlist)

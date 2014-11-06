@@ -11,8 +11,8 @@ Create example user and mod command to finish BasicFeatureSet.executeCommand() i
 [Devezich]
 Create a simple bot to deploy new instances of pyayaBot pyayaBot's Twitch chat.
 Write main deployment script.
+Write script to generate channel configurations.
 
 [Unassigned]
-Write script to generate channel configurations.
 Write unit tests for all methods in pyayaBot_main.py
 Write unit tests for all methods in pyayaBot_featureSets.py

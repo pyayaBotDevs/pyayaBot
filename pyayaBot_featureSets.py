@@ -1,6 +1,9 @@
 ## pyayaBot_featureSets.py 
 ## This module contains all of the interactive feature sets for pyayaBot.
 
+## TODO
+## Implement kick/ban detection. [ IN-PROGRESS ]
+
 ## Imports
 import pyayaBot_main, re
 
@@ -16,23 +19,33 @@ class BasicFeatureSet():
 	## This method will contain logic to handle basic commands.
 	## c              - The command to execute as a Command object.
 	def executeCommand(self, c):
-		## Admin level commands.
-		if (c.level == "ADMIN"):
-			## Look up the User object associated with the username who sent the command.
-			for user in self.parent.list_of_users:
-				if (user.name in c.user):
-					## Verify that the User is an admin.
-					if (user.bool_isadmin == 1):
-						if (c.name == "SHUTDOWNBOT"):
-							self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "ShutDownBot command issued by " + c.user))
-							self.parent.shutdownBot()
-		
+		## Look up the User object associated with the username who sent the command.
+		for user in self.parent.list_of_users:
+			if (user.name == c.user):
+				## ADMIN-level commands - Verify that the User is an admin.
+				if (c.level == "ADMIN" and user.bool_isadmin == 1):
+					if (c.name == "SHUTDOWNBOT"):
+						self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "ShutDownBot command issued by " + c.user))
+						self.parent.shutdownBot()
+				
+				## MOD-level commands - Verify that the User is an op.
+				if (c.level == "OP" and user.bool_isop == 1):
+					if (c.name == "YO"):
+						self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "Yo command issued by " + c.user))
+						self.parent.sendChatMessage("Adrian!")
+						
+				## USER-level commands - No User verification required.
+				if (c.level == "USER"):
+					if (c.name == "MOTD"):
+						self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "MOTD command issued by " + c.user))
+						self.parent.sendChatMessage("Good day! We hope you enjoy your stay here on " + self.parent.channel + "!")
+				
 	## parseLineFromChat - This method parses through a line of chat (A single chat message) to see if it contains a command.
 	## u                 - The user who sent the line of text.
 	## t                 - The line of text to parse.
 	def parseLineFromChat(self, u, t):
 		bool_iscommand = 0
-		if (re.match("^[!@#][a-zA-Z0-9]+$", t)):
+		if (re.match("^[!@$][a-zA-Z0-9]+$", t)):
 			bool_iscommand = 1
 
 		## Only try to execute a command if the line of text fits the command syntax.
@@ -52,10 +65,12 @@ class BasicFeatureSet():
 			if (t[0] == "!"):
 				self.level = "USER"
 			elif (t[0] == "@"):
-				self.level = "MOD"
-			elif (t[0] == "#"):
+				self.level = "OP"
+			elif (t[0] == "$"):
 				self.level = "ADMIN"
-			
+		
+			#self.printCommand()
+		
 		## printCommand - This method will print the attributes of the BasicFeatureSet.Command instance.
 		def printCommand(self):
 			print "    BasicFeatureSet.Command.printCommand()"
