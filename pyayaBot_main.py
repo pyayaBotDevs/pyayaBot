@@ -78,7 +78,7 @@ class Bot():
 		self.addAdmin("albinohat")
 		self.addAdmin("wrongwarped")
 		
-		self.printAdmins()
+		#self.printAdmins()
 		#self.printOps()
 		
 		## Call the method to listen for messages from the twitch.tv IRC server.
