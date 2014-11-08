@@ -517,6 +517,7 @@ class LogFairy():
 			if (os.path.isdir(log_dir) == 0):
 				try:
 					os.mkdir(log_dir)
+					
 				except WindowsError:
 					print "    pyayaBot.LogFairy.__init__(): Unable to create log directory: \"" + log_dir + ".\""
 					sys.exit()
@@ -538,6 +539,7 @@ class LogFairy():
 		## Open the handle to the chat log file, write the header row and log the action to the system log.		
 		try:
 			self.chat_log = open(log_dir + "/pyayaBot_" + channel + "_chatlog_" + self.date + "_" + self.time + ".csv", "w+")
+		
 		except IOError:
 			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "/pyayaBot_chatlog_" + self.date + "_" + self.time + ".csv.\""
 			sys.exit()
@@ -548,6 +550,7 @@ class LogFairy():
 		## Open the handle to the IRC log file, write the header row and log the action to the system log.		
 		try:
 			self.irc_log = open(log_dir + "/pyayaBot_" + channel + "_irclog_" + self.date + "_" + self.time + ".csv", "w+")
+		
 		except IOError:
 			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "/pyayaBot_irclog_" + self.date + "_" + self.time + ".csv.\""		
 			sys.exit()
@@ -558,6 +561,7 @@ class LogFairy():
 		## Open the handle to the admin log file, write the header row and log the action to the system log.		
 		try:
 			self.admin_log = open(log_dir + "/pyayaBot_" + channel + "_adminlog_" + self.date + "_" + self.time + ".csv", "w+")
+		
 		except IOError:
 			print "    pyayaBot.LogFairy.__init__(): Unable to open file: \"" + log_dir + "/pyayaBot_adminlog_" + self.date + "_" + self.time + ".csv.\""		
 			sys.exit()
@@ -593,7 +597,7 @@ class LogFairy():
 		if ((self.syslog_bitlist[0] == "1" and m.level == "INFO") or (self.syslog_bitlist[1] == "1" and m.level == "WARNING") or (self.syslog_bitlist[2] == "1" and m.level == "ERROR") or (self.syslog_bitlist[3] == "1" and m.level == "DEBUG")):
 			self.system_log.write(m.date + "," + m.time + "," + m.level + "," + m.body + "\n")
 	
-	## LogFairy.AdminMessage - Describes an objection which contains information about 
+	## LogFairy.AdminMessage - Describes an object which contains information about administrative changes. (Admin/Op adds/removes timeouts/bans)
 	class AdminMessage():
 		## __init__ - This method initializes the AdminMessage object.
 		## self.date - The current date.
@@ -627,7 +631,7 @@ class LogFairy():
 	
 	## End of LogFairy.ChatMessage class		
 		
-	## LogFairy.IRCMessage - Describes an object which contains information IRC messages from the twitch.tv IRC.
+	## LogFairy.IRCMessage - Describes an object which contains information IRC messages from the twitch.tv IRC server.
 	class IRCMessage():
 		## __init__ - This method initializes the IRCMessage object.
 		## self.date - The current date.
