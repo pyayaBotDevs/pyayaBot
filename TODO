@@ -3,10 +3,8 @@ pyayaBot instance will be hosted off of a test server hosted by Albinohat.
 Users of Twitch.tv will be able to spin up instances of pyayaBot from a Twitch chatroom.
 
 [Albinohat]
-User Management in pyayabot_main.py [ IN-PROGRESS ]
 Deploy a test server. (Linux)
 Create user account for Devezich on the test server.
-Create example user and mod command to finish BasicFeatureSet.executeCommand() in pyayaBot_featureSets.py
 
 [Devezich]
 Create a simple bot to deploy new instances of pyayaBot pyayaBot's Twitch chat.
