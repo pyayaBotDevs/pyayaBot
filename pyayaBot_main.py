@@ -5,9 +5,6 @@
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ##
 ## This is a list of things which need to be written or committed. ([ DONE ])
-## Create print methods in remaining classes. [ DONE ]
-## Update logging methods to open and close the log files so they are written in real-time. [ DONE ]
-## Update log format to be HTML rather than CSV. [ DONE ]
 ## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
 
 ## Imports
@@ -511,7 +508,7 @@ class LogFairy():
 		self.syslog_bitlist  = syslog_bitlist
 		
 		## Append the current date to the log dir to separate logs by day.
-		log_dir = log_dir + "/" + self.date
+		log_dir = log_dir + "/" + self.date + "/" + channel
 
 		## Call the method to initialize (create) log files.
 		self.initializeLogs(channel, log_dir)
