@@ -47,6 +47,17 @@ class Bot():
 	## config_format                - The format of the configuration file. (INI or JSON)
 	## syslog_bitlist               - The list of binary values controlling which system logging types are enabled.
 	def __init__(self, connection_config_path, channel_config_path, config_format, syslog_bitlist):
+  		print "                                ____        _     ____       _"   
+		print "                               |  _ \      | |   |  _ \     | |"
+		print "  _ __  _   _  __ _ _   _  __ _| |_) | ___ | |_  | |_) | ___| |_ __ _"
+		print " | '_ \| | | |/ _` | | | |/ _` |  _ < / _ \| __| |  _ < / _ \ __/ _` |"
+		print " | |_) | |_| | (_| | |_| | (_| | |_) | (_) | |__ | |_) |  __/ || (_| |"
+		print " | .__/ \__, |\__,_|\__, |\__,_|____/ \___/ \__| |____/ \___|\__\__,_|"
+		print " | |     __/ |       __/ |"
+		print " |_|    |___/       |___/"       
+
+		print "\nInitializing Bot instance."
+		
 		## Initialize the logging bitmask and lists of users and ops.	
 		self.syslog_bitlist       = syslog_bitlist
 		self.list_of_feature_sets = []
@@ -55,10 +66,11 @@ class Bot():
 		self.list_of_admins       = []
 		## Op list is maintained by the twitch.tv IRC server. (MODE messages)
 		self.list_of_ops          = []
-			
-		## Call the method to parse the connection and channel configuration files.
-		## This will initialize all required attributes to spin-up logging and connect to the twitch.tv IRC server.
 		
+		print "\nParsing configuration files. Format: " + config_format + "..."
+		
+		## Call the methods to parse the connection and channel configuration files.
+		## This will initialize all required attributes to spin-up logging and connect to the twitch.tv IRC server.	
 		if (config_format.lower() == "ini"):
 			self.parseConnectionIni(connection_config_path)
 			self.parseChannelIni(channel_config_path)
@@ -68,21 +80,35 @@ class Bot():
 		else:
 			print "    pyayaBot.Bot.__init__(): Invalid config format \"" + config_format + " \"specified!"
 			sys.exit()
-
+		
+		print "Successfully parsed configuration files!"
+		print "\nInitializing LogFairy..."
 		
 		## Initialize the LogFairy object using the log directory.
 		self.log = LogFairy(self.channel, self.log_dir, self.syslog_bitlist)
 		
+		print "Successfully initialized LogFairy!"
+		print "\nConnecting to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")..."
+		
 		## Call the method to connect to the twitch.tv IRC server.
 		self.connectToTwitch()
+		
+		print "Successfully connected to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")!"
+		print "\nInitializing feature sets..."
 		
 		## Call the method to initialize the various feature set objects.
 		self.initializeFeatureSets()
 
+		print "Successfully initialized feature sets!"
+		print "\nSeeding administrator list with broadcaster and development team..."
+		
 		## Add the broadcaster and devs to the list of admins.
 		self.addAdmin(self.channel)
 		self.addAdmin("albinohat")
 		self.addAdmin("wrongwarped")
+		
+		print "Successfully seeded administrator list!"
+		print "\nSuccessfully initialized Bot instance. All systems are GO!\n"
 		
 		#self.printAdmins()
 		#self.printOps()
@@ -342,78 +368,83 @@ class Bot():
 	## line                - The message sent from listenLoop().
 	def parseLineFromTwitch(self, line):		
 		if (line == ""):
-			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "NULL message from twitch.tv IRC server."))
+			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "NULL message from twitch.tv IRC server. Ignoring."))
 			return
 	
 		line_parts = line.split(" ", 3)
 		if (len(line_parts) < 2):
-			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Fragmented message \"" + line + "\" from twitch.tv IRC server."))
+			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Fragmented message \"" + line + "\" from twitch.tv IRC server. Ignoring."))
 			return
-			
-		if (re.match("[0-9]{3}", line_parts[1]) and line_parts[2] == "pyayabot"):
-			type = line_parts[1]
-			body = line_parts[3]
-			pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
 		
-			## Create and add users from the NAMES list.
-			if (line_parts[1] == "353"):
-				names_list = line_parts[3][len(self.channel) + 5:]			
-				self.addUsersFromNamesList(names_list)
-				
-		elif (line_parts[1] == "JOIN" and line_parts[2] == "#" + self.channel):
-			type = line_parts[1]
-			body = line_parts[0]
-			pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
+		elif (len(line_parts) == 2):
+			if (line_parts[0] == "PING"):
+				print "PONG " + line_parts[1]
+				self.twitch.send("PONG " + line_parts[1] + "\r\n")
 			
-			self.addUserFromJoinMessage(body)
-				
-		elif (line_parts[1] == "PART" and line_parts[2] == "#" + self.channel):
-			type = line_parts[1]
-			body = line_parts[0].strip()
-			pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
+				type = line_parts[1]
+				body = "N/A"
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))	
+
+		elif (len(line_parts) == 3):
+			if (line_parts[1] == "JOIN" and line_parts[2] == "#" + self.channel):
+				type = line_parts[1]
+				body = line_parts[0]
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
 			
-			## Remove the user from the list of tracked users.
-			self.removeUser(body)
+				self.addUserFromJoinMessage(body)
+				
+			elif (line_parts[1] == "PART" and line_parts[2] == "#" + self.channel):
+				type = line_parts[1]
+				body = line_parts[0].strip()
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
+			
+				## Remove the user from the list of tracked users.
+				self.removeUser(body)
+						
+		elif (len(line_parts) == 4):
+			if (re.match("[0-9]{3}", line_parts[1]) and line_parts[2] == "pyayabot"):
+				type = line_parts[1]
+				body = line_parts[3]
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
 		
-		elif (line_parts[1] == "MODE"):
-			type = line_parts[1]
-			body = line_parts[3]
+				## Create and add users from the NAMES list.
+				if (line_parts[1] == "353"):
+					names_list = line_parts[3][len(self.channel) + 5:]			
+					self.addUsersFromNamesList(names_list)
+
+			elif (line_parts[1] == "MODE"):
+				type = line_parts[1]
+				body = line_parts[3]
 			
-			mode_list = body.split(" ", 1)
-			if (mode_list[0] == "+o"):
-				self.addOp(mode_list[1])
-			elif (mode_list[0] == "-o"):
-				self.removeOp(mode_list[1])
+				mode_list = body.split(" ", 1)
+				if (mode_list[0] == "+o"):
+					self.addOp(mode_list[1])
+				elif (mode_list[0] == "-o"):
+					self.removeOp(mode_list[1])
+				else:
+					pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Invalid MODE operation: \"" + mode_list[0] + "\". Ignoring."))
+					return
+				
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
+					
+			elif (line_parts[1] == "PRIVMSG"):
+				user = line_parts[0]
+				body = line_parts[3][1:].rstrip()
+				pyayaBot_threading.writeToChatLogThread(self, self.log.ChatMessage(self.log, user, body))
+			
+				## Check if the user is tracked. If not, add the user to the list.
+				if (self.getIfKnownUser(user) == 0):
+					self.addUser(self.User(self, user))
+			
+				## Parse the chat message from the user to determine if a command was issued.
+				if (self.bool_basic_feature_set == 1):
+					if (self.basic_feature_set.checkIfCommand(body)):
+						pyayaBot_threading.executeCommandThread(self, self.basic_feature_set.Command(user, body))
+			
 			else:
-				pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Invalid MODE operation: \"" + mode_list[0] + "\"."))
-				return
-				
-			pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
-		
-		elif (line_parts[0] == "PING"):
-			print "PONG " + line_parts[1]
-			self.twitch.send("PONG " + line_parts[1] + "\r\n")
-			
-			type = line_parts[1]
-			body = "N/A"
-			pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))	
-	
-		elif (line_parts[1] == "PRIVMSG"):
-			user = line_parts[0]
-			body = line_parts[3][1:].rstrip()
-			pyayaBot_threading.writeToChatLogThread(self, self.log.ChatMessage(self.log, user, body))
-			
-			## Check if the user is tracked. If not, add the user to the list.
-			if (self.getIfKnownUser(user) == 0):
-				self.addUser(self.User(self, user))
-			
-			## Parse the chat message from the user to determine if a command was issued.
-			if (self.bool_basic_feature_set == 1):
-				if (self.basic_feature_set.checkIfCommand(body)):
-					pyayaBot_threading.executeCommandThread(self, self.basic_feature_set.Command(user, body))
-			
+				pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Unknown message type received from twitch.tv IRC server: \"" + line_parts[1] + "\". Ignoring."))	
 		else:
-			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Unknown message type received from twitch.tv IRC server: \"" + line_parts[1] + "\"."))	
+			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Unexpected # of words in message \"" + line + " \". Ignoring"))	
 
 	## printAdmins - Prints out list of admins.
 	def printAdmins(self):

@@ -23,7 +23,7 @@ class executeCommandThread(threading.Thread):
 		self.thread_id = threading.activeCount() + 1
 		self.command   = command
 		self.run()
-	
+		
 	## run - This method calls the parseLineFromTwitch method.
 	def run(self):
 		self.parent.basic_feature_set.executeCommand(self.command)
