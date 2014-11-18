@@ -6,7 +6,7 @@
 ##
 ## ==All Feature Sets==
 ## Implement multi-threading [ DONE ]
-#### Command executions [ DONE ]
+##   Command executions [ DONE ]
 ##
 ## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
 ##
@@ -23,6 +23,9 @@
 ##
 ## ==YouTubeFeatureSet==
 ## Implement displaying metadata of a YouTube video upon seeing a YouTube video link in chat. [ NOT STARTED ]
+
+## BUG FIXES
+## Fixed a bug where sending unexpected admin-level or op-level could cause a crash.
 
 ## Standard Imports
 import re
@@ -140,11 +143,15 @@ class BasicFeatureSet():
 		def __init__(self, u, t):
 			self.user = u
 			
+			t_list = t.split(" ", 3)
+			
 			## Make the command upper case.
-			if (t.count(" ") == 0):
-				self.name = t[1:].upper()
-			elif (t.count(" ") > 0 and "MOTD" in t[1:6].upper()):
-				self.name = t[1:t.find(" ", 6)].upper() + t[t.find(" ", 6):]
+			if (len(t_list) == 1):
+				self.name = t_list[0][1:].upper()
+			elif (len(t_list) == 3 and t_list[0].upper() == "@MOTD"):
+				self.name = t_list[0].upper() + " " + t_list[1].upper() + " " + t_list[2]
+			else:
+				self.name = "INVALID"
 			if (t[0] == "!"):
 				self.level = "USER"
 			elif (t[0] == "@"):

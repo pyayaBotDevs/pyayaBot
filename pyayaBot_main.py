@@ -5,13 +5,11 @@
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ##
 ## This is a list of things which need to be written or committed. ([ DONE ])
-## Support configuration file format JSON. [ DONE ]
 ## Implement a timer to trigger the bot to send the MOTD. [ NOT STARTED ]
 ## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
 
 ## BUG FIXES
-## Twitch messages < 2 words long are no longer processed and a WARNING system message is logged.
-## Fixed a bug in removeUser where a non-existent user would be removed causing a crash.
+## 
 
 ## Standard Imports
 import json, os, re, socket, sys, time
@@ -208,7 +206,9 @@ class Bot():
 			elif (fs == "YouTubeFeatureSet"):
 				## Instantiate YouTubeFeatureSet object here.
 				self.bool_youtube_feature_set = 1
-	
+			else:
+				pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Invalid feature set \"" + fs + "\" detected. Ignoring."))
+				
 	## listenLoop - This method enters an infinite loop and listens for text from the twitch.tv IRC Server.
 	def listenLoop(self):
 		while (1):
