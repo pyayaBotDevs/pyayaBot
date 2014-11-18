@@ -24,7 +24,6 @@
 ## ==YouTubeFeatureSet==
 ## Implement displaying metadata of a YouTube video upon seeing a YouTube video link in chat. [ NOT STARTED ]
 
-
 ## Standard Imports
 import re
 

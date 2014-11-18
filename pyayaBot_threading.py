@@ -3,7 +3,7 @@
 ## This module contains the special thread subclasses used by pyayaBot.
 
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
-##
+## Looking lonely on the dance floor.
 
 ## Standard imports
 import threading

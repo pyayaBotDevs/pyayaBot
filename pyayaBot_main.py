@@ -13,8 +13,6 @@
 ## Implement a timer to trigger the bot to send the MOTD. [ NOT STARTED ]
 ## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
 
-
-
 ## BUG FIXES
 ##
 ## Fixed the removeUser method to use user.name rather than user.n
@@ -206,8 +204,7 @@ class Bot():
 			elif (fs == "YouTubeFeatureSet"):
 				## Instantiate YouTubeFeatureSet object here.
 				self.bool_youtube_feature_set = 1
-
-		
+	
 	## listenLoop - This method enters an infinite loop and listens for text from the twitch.tv IRC Server.
 	def listenLoop(self):
 		while (1):
