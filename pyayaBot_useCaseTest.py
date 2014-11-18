@@ -11,8 +11,6 @@ if (len(sys.argv) != 3):
 test_connection_config = "./connection_config." + sys.argv[2]
 test_channel_config    = "./channel_config_" + sys.argv[1] + "." + sys.argv[2]
 
-print test_connection_config
-
 ## This int will be turned a list of binary values to control lagging.
 ## INFO Logging    - Add 8
 ## WARNING Logging - Add 4

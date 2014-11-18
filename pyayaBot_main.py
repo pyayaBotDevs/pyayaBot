@@ -10,7 +10,8 @@
 ## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
 
 ## BUG FIXES
-##
+## Twitch messages < 2 words long are no longer processed and a WARNING system message is logged.
+## Fixed a bug in removeUser where a non-existent user would be removed causing a crash.
 
 ## Standard Imports
 import json, os, re, socket, sys, time
@@ -216,8 +217,8 @@ class Bot():
 			temp = read_buffer.split("\n", 1000)
 			for line in temp:
 				if (line != "" and line != "\n" and line != "\r\n"):
-					print line
-					pyayaBot_threading.parseLineFromTwitchThread(self, line.rstrip())
+					print line.strip()
+					pyayaBot_threading.parseLineFromTwitchThread(self, line.strip())
 		
 	## parseChannelJson - This method opens the channel configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
 	def parseChannelJson(self, config_path):
@@ -345,7 +346,10 @@ class Bot():
 			return
 	
 		line_parts = line.split(" ", 3)
-		
+		if (len(line_parts) < 2):
+			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Fragmented message \"" + line + "\" from twitch.tv IRC server."))
+			return
+			
 		if (re.match("[0-9]{3}", line_parts[1]) and line_parts[2] == "pyayabot"):
 			type = line_parts[1]
 			body = line_parts[3]
@@ -365,7 +369,7 @@ class Bot():
 				
 		elif (line_parts[1] == "PART" and line_parts[2] == "#" + self.channel):
 			type = line_parts[1]
-			body = line_parts[0]
+			body = line_parts[0].strip()
 			pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
 			
 			## Remove the user from the list of tracked users.
@@ -479,7 +483,7 @@ class Bot():
 	def removeUser(self, n):
 		for user in self.list_of_users:
 			if (user.name == n):
-				self.list_of_users.remove(user.name)
+				self.list_of_users.remove(user)
 				break				
 				
 	## sendChatMessage - Sends a message to the twitch server as well as STDOUT.
