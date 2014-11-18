@@ -4,26 +4,38 @@
 
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ##
-## ==BasicFeatureSet==
-## Create print methods in remaining classes. [ DONE ]
-## make commands case-insensitive and strip extra whitespace. [ DONE ]
-## Write getter and setter methods for MOTD message and timer. [ DONE ]
-## Create the admin commands to set the MOTD message and timer. [ DONE ]
-## Implement kick/ban detection. [ NOT STARTED ]
-## Insert Admin logging into kick/ban detection. [ NOT STARTED ]
+## ==All Feature Sets==
+## Implement multi-threading [ DONE ]
+#### Command executions [ DONE ]
+##
 ## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
 ##
+## ==BasicFeatureSet==
+## Implement kick/ban detection. [ NOT STARTED ]
+## Insert Admin logging into kick/ban detection. [ NOT STARTED ]
+##
+## ==OsuFeatureSet==
+## Implement displaying metadata of a YouTube video upon seeing an osu! beatmap link. [ NOT STARTED ]
+##
 ## ==QuakeLiveFeatureSet==
-## Implement Challenge.com integration [ NOT STARTED ]
+## Implement Challonge.com integration [ NOT STARTED ]
 ## Implement QLRanks integration [ NOT STARTED ]
+##
+## ==YouTubeFeatureSet==
+## Implement displaying metadata of a YouTube video upon seeing a YouTube video link in chat. [ NOT STARTED ]
 
-## Imports
-import pyayaBot_main, re
+
+## Standard Imports
+import re
+
+## Third-party imports.
+import pyayaBot_main
 from bs4 import BeautifulSoup
 
 ## BasicFeatureSet - Contains methods which supply non-game-specific features in a channel.
 ## self.parent     - A handle to the parent Bot object.
 ## self.motd       - The message of the day. 
+## self.motd_timer - The time to wait between sending the motd to chat.
 class BasicFeatureSet():
 	## __init__    - Initialize the attributes of a User object.
 	## self.parent - A handle to the parent Bot object.
@@ -34,6 +46,14 @@ class BasicFeatureSet():
 	
 		#self.printBasicFeatureSet()
 
+	## parseLineFromChat - This method parses through a line of chat (A single chat message) to see if it contains a command.
+	## t                 - The line of text to parse.
+	def checkIfCommand(self, t):
+		if (re.match("^[!@$].+$", t)):
+			return 1
+		else:
+			return 0
+		
 	## executeCommand - This method executes a command typed by a user.
 	## This method will contain logic to handle basic commands.
 	## c              - The command to execute as a Command object.
@@ -75,19 +95,7 @@ class BasicFeatureSet():
 	## getMotdTimer - Returns the time the bot waits before saying the MOTD to chat.
 	def getMotdTimer(self):
 		return self.motd_timer
-	
-	## parseLineFromChat - This method parses through a line of chat (A single chat message) to see if it contains a command.
-	## u                 - The user who sent the line of text.
-	## t                 - The line of text to parse.
-	def parseLineFromChat(self, u, t):
-		bool_iscommand = 0
-		if (re.match("^[!@$].+$", t)):
-			bool_iscommand = 1
 		
-		## Only try to execute a command if the line of text fits the command syntax.
-		if (bool_iscommand == 1):
-			self.executeCommand(self.Command(u, t))
-	
 	## printBasicFeatureSet - Prints the attributes of the printBasicFeatureSet instance.
 	def printBasicFeatureSet(self):
 		print "    BasicFeatureSet.printBasicFeatureSet()"
