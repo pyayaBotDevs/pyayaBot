@@ -1,5 +1,8 @@
-*.txt
+# File Extensions
 *.ini
 *.pyc
-.\logs
+*.txt
+*.json
+
+# Directories
 logs/

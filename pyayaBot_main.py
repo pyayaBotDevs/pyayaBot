@@ -5,22 +5,15 @@
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ##
 ## This is a list of things which need to be written or committed. ([ DONE ])
-## Implement multi-threading [ DONE ]
-#### Logging [ DONE ]
-#### Message Parsing [ DONE ]
-#### Line Parsing [ DONE ]
-## Change configuration file format from INI to JSON. [ NOT STARTED ]
+## Support configuration file format JSON. [ DONE ]
 ## Implement a timer to trigger the bot to send the MOTD. [ NOT STARTED ]
 ## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
 
 ## BUG FIXES
 ##
-## Fixed the removeUser method to use user.name rather than user.n
-## Added a check that a message received from the twitch.tv IRC server is complete.
-## Right-stripping all lines parsed from the twitch.tv IRC server and ignoring null lines.
 
 ## Standard Imports
-import os, re, socket, sys, time
+import json, os, re, socket, sys, time
 
 ## Third-party Imports
 import pyayaBot_featureSets, pyayaBot_threading
@@ -52,8 +45,9 @@ class Bot():
 	##
 	## connection_config_path       - The absolute or relative path to the connection configuration file to initialize the Bot instance.
 	## channel_config_path          - The absolute or relative path to the channel configuration file to initialize the Bot instance.
+	## config_format                - The format of the configuration file. (INI or JSON)
 	## syslog_bitlist               - The list of binary values controlling which system logging types are enabled.
-	def __init__(self, connection_config_path, channel_config_path, syslog_bitlist):
+	def __init__(self, connection_config_path, channel_config_path, config_format, syslog_bitlist):
 		## Initialize the logging bitmask and lists of users and ops.	
 		self.syslog_bitlist       = syslog_bitlist
 		self.list_of_feature_sets = []
@@ -65,8 +59,17 @@ class Bot():
 			
 		## Call the method to parse the connection and channel configuration files.
 		## This will initialize all required attributes to spin-up logging and connect to the twitch.tv IRC server.
-		self.parseConnectionConfigFile(connection_config_path)
-		self.parseChannelConfigFile(channel_config_path)
+		
+		if (config_format.lower() == "ini"):
+			self.parseConnectionIni(connection_config_path)
+			self.parseChannelIni(channel_config_path)
+		elif (config_format.lower() == "json"):
+			self.parseConnectionJson(connection_config_path)
+			self.parseChannelJson(channel_config_path)
+		else:
+			print "    pyayaBot.Bot.__init__(): Invalid config format \"" + config_format + " \"specified!"
+			sys.exit()
+
 		
 		## Initialize the LogFairy object using the log directory.
 		self.log = LogFairy(self.channel, self.log_dir, self.syslog_bitlist)
@@ -216,12 +219,33 @@ class Bot():
 					print line
 					pyayaBot_threading.parseLineFromTwitchThread(self, line.rstrip())
 		
-	## parseChannelConfigFile - This method opens the channel configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
-	def parseChannelConfigFile(self, config_path):
+	## parseChannelJson - This method opens the channel configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
+	def parseChannelJson(self, config_path):
+		try:
+			config_json = json.load(open(config_path))
+		except IOError:
+			print "    pyayaBot.Bot.parseChannelConfigJson(): Unable to open file: \"" + config_path + ".\""
+			sys.exit()
+
+		for key, value in config_json.iteritems():
+			if (key == "channel"):
+				self.channel = value
+			elif (key == "feature_sets"):
+				self.list_of_feature_sets = value
+			else:
+				print "    pyayaBot.Bot.parseConnectionJson(): Invalid config entry: \"" + key + ".\" Ignoring..."
+		
+		if (self.channel == "" or len(self.list_of_feature_sets) == 0):
+			print "    pyayaBot.Bot.parseChannelConfigJson(): One or more configuration entries were not set."
+			print "    Please verify the configuration file's contents and try again."
+			sys.exit()
+
+	## parseChannelIni - This method opens the channel configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
+	def parseChannelIni(self, config_path):
 		try:
 			config_file = open(config_path, "r")
 		except IOError:
-			print "    pyayaBot.Bot.parseChannelConfigFile(): Unable to open file: \"" + config_path + ".\""
+			print "    pyayaBot.Bot.parseChannelConfigIni(): Unable to open file: \"" + config_path + ".\""
 			sys.exit()
 			
 		for line in config_file:
@@ -235,21 +259,53 @@ class Bot():
 			elif (self.line_list[0] == "FEATURESET"):
 				self.list_of_feature_sets.append(self.line_list[1].rstrip())
 			else:
-				print "    pyayaBot.Bot.parseChannelConfigFile(): Invalid config entry: \"" + self.line_list[0] + ".\" Ignoring..."
+				print "    pyayaBot.Bot.parseChannelIni(): Invalid config entry: \"" + self.line_list[0] + ".\" Ignoring..."
 
 		if (self.channel == "" or len(self.list_of_feature_sets) == 0):
-			print "    pyayaBot.Bot.parseChannelConfigFile(): One or more configuration entries were not set."
+			print "    pyayaBot.Bot.parseChannelIni(): One or more configuration entries were not set."
 			print "    Please verify the configuration file's contents and try again."
 			sys.exit()
 		
 		config_file.close()
 		
-	## parseConnectionConfigFile - This method opens the connection configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
-	def parseConnectionConfigFile(self, config_path):
+	## parseConnectionJson - This method opens the connection configuration JSON file and parses it to ensure the correct values are set to initialize the Bot instance.		
+	def parseConnectionJson(self, config_path):
+		try:
+			config_json = json.load(open(config_path))
+		
+		except IOError:
+			print "    pyayaBot.Bot.parseConnectionJson(): Unable to open file: \"" + config_path + ".\""
+			sys.exit()
+		
+		for key, value in config_json.iteritems():
+			if (key == "host"):
+				self.host = value
+			elif (key == "port"):
+				self.port = value
+			elif (key == "nick"):
+				self.nick = value
+				self.ident = self.nick
+			elif (key == "pass"):
+				self.oauth = value
+			elif (key == "realname"):
+				self.realname = value
+			elif (key == "log_dir"):
+				self.log_dir = value
+			else:
+				print "    pyayaBot.Bot.parseConnectionIni(): Invalid config entry: \"" + key + ".\" Ignoring..."
+		
+		if (self.host == "" or self.port == 0 or self.nick == "" or self.oauth == "" or self.realname == "" or self.log_dir == ""):
+			print "    pyayaBot.Bot.parseConnectionJson(): One or more configuration entries were not set."
+			print "    Please verify the configuration file's contents and try again."
+			sys.exit()		
+		
+	## parseConnectionIni - This method opens the connection configuration INI file and parses it to ensure the correct values are set to initialize the Bot instance.
+	def parseConnectionIni(self, config_path):
 		try:
 			config_file = open(config_path, "r")
+		
 		except IOError:
-			print "    pyayaBot.Bot.parseConnectionConfigFile(): Unable to open file: \"" + config_path + ".\""
+			print "    pyayaBot.Bot.parseConnectionIni(): Unable to open file: \"" + config_path + ".\""
 			sys.exit()
 			
 		for line in config_file:
@@ -272,10 +328,10 @@ class Bot():
 			elif (self.line_list[0] == "LOG_DIR"):			
 				self.log_dir  = self.line_list[1].rstrip()				
 			else:
-				print "    pyayaBot.Bot.parseConnectionConfigFile(): Invalid config entry: \"" + self.line_list[0] + ".\" Ignoring..."
+				print "    pyayaBot.Bot.parseConnectionIni(): Invalid config entry: \"" + self.line_list[0] + ".\" Ignoring..."
 
-		if (self.host == "" or self.port == 0 or self.nick == "" or self.oauth == "" or self.realname == ""):
-			print "    pyayaBot.Bot.parseConnectionConfigFile(): One or more configuration entries were not set."
+		if (self.host == "" or self.port == 0 or self.nick == "" or self.oauth == "" or self.realname == "" or self.log_dir == ""):
+			print "    pyayaBot.Bot.parseConnectionIni(): One or more configuration entries were not set."
 			print "    Please verify the configuration file's contents and try again."
 			sys.exit()
 		
