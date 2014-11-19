@@ -11,6 +11,10 @@
 ## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
 ##
 ## ==BasicFeatureSet==
+## Modify command validation to use regular expressions and .lower() checks. [ DONE ]
+## Rework MOTD SET into a SET [setting] [ NOT STARTED ]
+##    Second word is what you are setting. Third + will be the new value.
+## Rework MOTD TIMER into a SET TIMER [type] command [NOT STARTED ]
 ## Implement kick/ban detection. [ NOT STARTED ]
 ## Insert Admin logging into kick/ban detection. [ NOT STARTED ]
 ##
@@ -20,6 +24,8 @@
 ## ==QuakeLiveFeatureSet==
 ## Implement Challonge.com integration [ NOT STARTED ]
 ## Implement QLRanks integration [ NOT STARTED ]
+##    Implement !stats command [NOT STARTED ]
+##    Implement !maps command [ NOT STARTED ]
 ##
 ## ==YouTubeFeatureSet==
 ## Implement displaying metadata of a YouTube video upon seeing a YouTube video link in chat. [ NOT STARTED ]
@@ -44,7 +50,7 @@ class BasicFeatureSet():
 	def __init__(self, parent):
 		self.parent     = parent
 		self.motd       = "Good day! We hope you enjoy your stay here on " + self.parent.channel + "!"
-		self.motd_timer = 0
+		self.motd_timer = 60.000
 	
 		#self.printBasicFeatureSet()
 
@@ -65,29 +71,30 @@ class BasicFeatureSet():
 			if (user.name == c.user):
 				## ADMIN-level commands - Verify that the User is an admin.
 				if (c.level == "ADMIN" and user.bool_isadmin == 1):
-					if (c.name == "SHUTDOWNBOT"):
+					if (re.match("^shutdown$", c.name.lower())):
 						self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "ADMIN-level SHUTDOWNBOT command issued by " + c.user))
 						self.parent.shutdownBot()
 				
 				## MOD-level commands - Verify that the User is an op.
-				if (c.level == "OP" and user.bool_isop == 1):
+				if (c.level == "OP" and (user.bool_isop == 1 or user.bool_isadmin == 1)):
 					## YO Command - Simple example of bot responding to user input.
-					if (c.name == "YO"):
+					if (re.match("yo", c.name.lower())):
 						self.parent.sendChatMessage("Adrian!")
 						self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "OP-level YO command issued by " + c.user))
 
-					## MOTD Commands
-					## SET - Calls the setMotd method to change the message of the day.
-					if (c.name[0:9] == "MOTD SET "):
+					## SET Commands
+					## SET MOTD - Calls the setMotd method to change the message of the day.
+					if (re.match("^set motd ", c.name.lower())):
 						self.setMotd(c)
 					
-					## TIMER - Sets the time the bot waits between saying the message of the day. 
-					elif (c.name[0:11] == "MOTD TIMER "):	
+					## SET TIMER Commands
+					## SET TIMER MOTD - Sets the time the bot waits between saying the message of the day. 
+					elif (re.match("^set timer motd ", c.name.lower())):	
 						self.setMotdTimer(c)
 				
 				## USER-level commands - No User verification required.
 				if (c.level == "USER"):
-					if (c.name == "MOTD"):
+					if (re.match("^motd$", c.name.lower())):
 						self.sendMotd()
 		
 	## getMotd - Returns the message of the day.
@@ -113,24 +120,27 @@ class BasicFeatureSet():
 	## c       - A command instance containing the new message to set as the message of the day.
 	def setMotd(self, c):
 		if (len(c.name) > 18 and len(c.name) < 260):	
-			self.motd = c.name[9:]
+			self.motd = c.name.split(" ", 2)[2]
 			self.parent.sendChatMessage("MOTD updated successfully!")
 			self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "OP-level MOTD SET command issued by " + c.user))
 		else:
-			self.parent.sendChatMessage("Invalid MOTD SET command. Syntax: @MOTD SET [Message]")
+			self.parent.sendChatMessage("Invalid SET MOTD command. Syntax: @set motd [Message]")
 			self.parent.sendChatMessage("Message must be between 10 and 250 characters.")
 
 	## setMotdTimer - Changes the time the bot waits between sending the MOTD.
 	## c            - A command instance containing the new time (in seconds) to wait between sending the MOTD.
 	def setMotdTimer(self, c):
-		c.name = c.name.lstrip().rstrip()
-		if (c.name[11:].isdigit() and (int(c.name[11:]) > 0 and int(c.name[11:]) <= 3600)):
-			self.motd_timer = c.name[11:0]
+		new_value = c.name.split(" ", 3)[3]
+		if (new_value.isdigit() and (int(new_value) >= 60 and int(new_value) <= 3600)):
+			self.motd_timer = float(new_value)
+			self.parent.send_motd_thread.updateDelay(self.motd_timer)
+			
 			self.parent.sendChatMessage("MOTD timer updated successfully!")
+		
 			self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "OP-level MOTD TIMER command issued by " + c.user))
 		else:
-			self.parent.sendChatMessage("Invalid MOTD TIMER command. Syntax: @MOTD SET [Number]")
-			self.parent.sendChatMessage("Number must be between 0 and 3600.")
+			self.parent.sendChatMessage("Invalid SET TIMER MOTD command. Syntax: @set timer motd [Number]")
+			self.parent.sendChatMessage("Number must be between 60 and 3600.")
 
 	## BasicFeatureSet.Command - Contains the text and level of a command.
 	class Command():
@@ -142,16 +152,8 @@ class BasicFeatureSet():
 		## t          - The text sent from BasicFeatureSet.parseLineFromChat as a string.
 		def __init__(self, u, t):
 			self.user = u
+			self.name = t[1:]
 			
-			t_list = t.split(" ", 3)
-			
-			## Make the command upper case.
-			if (len(t_list) == 1):
-				self.name = t_list[0][1:].upper()
-			elif (len(t_list) == 3 and t_list[0].upper() == "@MOTD"):
-				self.name = t_list[0].upper() + " " + t_list[1].upper() + " " + t_list[2]
-			else:
-				self.name = "INVALID"
 			if (t[0] == "!"):
 				self.level = "USER"
 			elif (t[0] == "@"):

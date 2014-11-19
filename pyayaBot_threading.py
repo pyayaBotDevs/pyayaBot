@@ -5,8 +5,12 @@
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ## Looking lonely on the dance floor.
 
+## BUG FIXES
+## Changed run() calls to start(). 
+## Set each thread type to run as a daemon to ensure a clean exit when the mean thread exits. [ IN PROGRESS ]
+
 ## Standard imports
-import threading
+import threading, sys, time
 
 ## Third-party imports
 import pyayaBot_main
@@ -22,7 +26,11 @@ class executeCommandThread(threading.Thread):
 		self.parent    = parent
 		self.thread_id = threading.activeCount() + 1
 		self.command   = command
-		self.run()
+		self.start()
+
+	## exit - Exits the current thread.
+	def exit(self):
+		sys.exit()
 		
 	## run - This method calls the parseLineFromTwitch method.
 	def run(self):
@@ -41,13 +49,49 @@ class parseLineFromTwitchThread(threading.Thread):
 		self.parent    = parent
 		self.thread_id = threading.activeCount() + 1
 		self.line      = line
-		self.run()
-	
+		self.start()
+		
+	## exit - Exits the current thread.
+	def exit(self):
+		sys.exit()
+		
 	## run - This method calls the parseLineFromTwitch method.
 	def run(self):
 		self.parent.parseLineFromTwitch(self.line)
 
 ## end of parseLineFromTwitchThread class.	
+
+## sendMotdThread - A thread which sends the MOTD to the chat.
+class sendMotdThread(threading.Thread):
+	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
+	## self.parent      - The pyayaBot_main.Bot instance which spawned this thread.
+	## self.thread_id   - A unique ID assigned to each thread.
+	## self.delay       - The amount of time to wait before sending the MOTD.
+	## self.bool_update - A boolean tracking whether or not to reset the loop with the new delay.
+	def __init__(self, parent, delay):
+		threading.Thread.__init__(self)
+		self.parent      = parent
+		self.thread_id   = threading.activeCount() + 1
+		self.delay       = delay
+		self.bool_update = 0
+		self.start()
+		
+	## exit - Exits the current thread.
+	def exit(self):
+		sys.exit()
+		
+	## run - Performs the chain of method executions.
+	def run(self):
+		while(self.parent.bool_shutdown == 0):			
+			time.sleep(self.delay)
+			if (self.parent.bool_shutdown == 0):
+				self.parent.basic_feature_set.sendMotd()
+		
+	## updateDelay - Updates the amount of time to wait before sending the MOTD.
+	def updateDelay(self, delay):
+		self.delay = delay
+		
+## End of the sendMotdThread class.
 		
 ## writeToAdminLogThread - A thread which writes an entry to the Admin log file.
 class writeToAdminLogThread(threading.Thread):
@@ -60,8 +104,13 @@ class writeToAdminLogThread(threading.Thread):
 		self.parent    = parent
 		self.thread_id = threading.activeCount() + 1
 		self.message   = message
-		self.run()
+		self.start()
+
+	## exit - Exits the current thread.
+	def exit(self):
+		sys.exit()
 		
+	## run - Performs the chain of method executions.
 	def run(self):
 		self.parent.log.writeToAdminLog(self.message)
 		
@@ -78,8 +127,13 @@ class writeToChatLogThread(threading.Thread):
 		self.parent    = parent
 		self.thread_id = threading.activeCount() + 1
 		self.message   = message
-		self.run()
+		self.start()
+
+	## exit - Exits the current thread.
+	def exit(self):
+		sys.exit()
 		
+	## run - Performs the chain of method executions.
 	def run(self):
 		self.parent.log.writeToChatLog(self.message)
 		
@@ -96,8 +150,13 @@ class writeToIRCLogThread(threading.Thread):
 		self.parent    = parent
 		self.thread_id = threading.activeCount() + 1
 		self.message   = message
-		self.run()
+		self.start()
+
+	## exit - Exits the current thread.
+	def exit(self):
+		sys.exit()
 		
+	## run - Performs the chain of method executions.
 	def run(self):
 		self.parent.log.writeToIRCLog(self.message)
 		
@@ -110,12 +169,17 @@ class writeToSystemLogThread(threading.Thread):
 	## self.thread_id - A unique ID assigned to each thread.
 	## self.line      - The line of text to be parsed.
 	def __init__(self, parent, message):
-		threading.Thread.__init__(self)	
+		threading.Thread.__init__(self)
 		self.parent    = parent
 		self.thread_id = threading.activeCount() + 1
 		self.message   = message
-		self.run()
+		self.start()
 		
+	## exit - Exits the current thread.
+	def exit(self):
+		sys.exit()
+		
+	## run - Performs the chain of method executions.
 	def run(self):
 		self.parent.log.writeToSystemLog(self.message)
 		

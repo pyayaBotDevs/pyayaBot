@@ -5,11 +5,12 @@
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ##
 ## This is a list of things which need to be written or committed. ([ DONE ])
-## Implement a timer to trigger the bot to send the MOTD. [ NOT STARTED ]
+## Implement a timer to trigger the bot to send the MOTD. [ DONE ]
 ## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
 
 ## BUG FIXES
-## 
+## Thread inits now call .start()
+## All infinite loops now use a shutdown boolean in order to ensure a clean shutdown.
 
 ## Standard Imports
 import json, os, re, socket, sys, time
@@ -41,7 +42,7 @@ class Bot():
 	## self.list_of_admins          - A list of strings containing the usernames of admins. (Broadcast + albinohat)
 	## self.list_of_ops             - A list of strings containing the usernames of channel operators.
 	## self.bool_[name]_feature_set - A boolean tracking whether or not this bot instance will have access to the [name] feature set.
-	##
+	## self.bool_shutdown           - A boolean tracking whether or not the shutdown command has been issued.
 	## connection_config_path       - The absolute or relative path to the connection configuration file to initialize the Bot instance.
 	## channel_config_path          - The absolute or relative path to the channel configuration file to initialize the Bot instance.
 	## config_format                - The format of the configuration file. (INI or JSON)
@@ -58,7 +59,8 @@ class Bot():
 
 		print "\nInitializing Bot instance."
 		
-		## Initialize the logging bitmask and lists of users and ops.	
+		## Initialize the shutdown boolean, logging bitmask and lists of users and ops.	
+		self.bool_shutdown        = 0
 		self.syslog_bitlist       = syslog_bitlist
 		self.list_of_feature_sets = []
 		self.list_of_users        = []
@@ -201,7 +203,12 @@ class Bot():
 	def connectToTwitch(self):
 		## Open the connection to twitch IRC and join the channel specified in the config file.
 		self.twitch = socket.socket()
-		self.twitch.connect((self.host, self.port))
+		try:
+			self.twitch.connect((self.host, self.port))
+		except SocketError:
+			print "Failed to connect to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")!"
+			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "ERROR", "Failed to connect to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")"))
+			self.shutdownBot()
 		self.twitch.send("PASS %s\r\n" % self.oauth) 
 		self.twitch.send("NICK %s\r\n" % self.nick)
 		self.twitch.send("USER %s %s bla :%s\r\n" % (self.ident, self.host, self.realname))
@@ -221,8 +228,12 @@ class Bot():
 		for fs in self.list_of_feature_sets:
 			## Initialize a BasicFeatureSet instance.
 			if (fs == "BasicFeatureSet"):
-				self.basic_feature_set = pyayaBot_featureSets.BasicFeatureSet(self)
 				self.bool_basic_feature_set = 1
+				self.basic_feature_set = pyayaBot_featureSets.BasicFeatureSet(self)
+				
+				## Start the child thread to periodically send the MOTD.
+				self.send_motd_thread = pyayaBot_threading.sendMotdThread(self, self.basic_feature_set.motd_timer)
+				
 			elif (fs == "OsuFeatureSet"):
 				## Instantiate OsuFeatureSet object here.
 				self.bool_osu_feature_set = 1
@@ -237,15 +248,15 @@ class Bot():
 				
 	## listenLoop - This method enters an infinite loop and listens for text from the twitch.tv IRC Server.
 	def listenLoop(self):
-		while (1):
+		while (self.bool_shutdown == 0):
 			## Split data received from the twitch.tv IRC server into lines.
-			read_buffer = self.twitch.recv(9182)
-			temp = read_buffer.split("\n", 1000)
+			read_buffer = self.twitch.recv(1024)
+			temp = read_buffer.split("\n", 100)
 			for line in temp:
 				if (line != "" and line != "\n" and line != "\r\n"):
 					print line.strip()
-					pyayaBot_threading.parseLineFromTwitchThread(self, line.strip())
-		
+					parse_line_from_twitch_thread = pyayaBot_threading.parseLineFromTwitchThread(self, line.strip()).join()
+
 	## parseChannelJson - This method opens the channel configuration file and parses it to ensure the correct values are set to initialize the Bot instance.
 	def parseChannelJson(self, config_path):
 		try:
@@ -368,12 +379,12 @@ class Bot():
 	## line                - The message sent from listenLoop().
 	def parseLineFromTwitch(self, line):		
 		if (line == ""):
-			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "NULL message from twitch.tv IRC server. Ignoring."))
+			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "NULL message from twitch.tv IRC server. Ignoring.")).join()
 			return
 	
 		line_parts = line.split(" ", 3)
 		if (len(line_parts) < 2):
-			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Fragmented message \"" + line + "\" from twitch.tv IRC server. Ignoring."))
+			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Fragmented message \"" + line + "\" from twitch.tv IRC server. Ignoring.")).join()
 			return
 		
 		elif (len(line_parts) == 2):
@@ -383,20 +394,20 @@ class Bot():
 			
 				type = line_parts[1]
 				body = "N/A"
-				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))	
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))	.join()
 
 		elif (len(line_parts) == 3):
 			if (line_parts[1] == "JOIN" and line_parts[2] == "#" + self.channel):
 				type = line_parts[1]
 				body = line_parts[0]
-				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body)).join()
 			
 				self.addUserFromJoinMessage(body)
 				
 			elif (line_parts[1] == "PART" and line_parts[2] == "#" + self.channel):
 				type = line_parts[1]
 				body = line_parts[0].strip()
-				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body)).join()
 			
 				## Remove the user from the list of tracked users.
 				self.removeUser(body)
@@ -405,7 +416,7 @@ class Bot():
 			if (re.match("[0-9]{3}", line_parts[1]) and line_parts[2] == "pyayabot"):
 				type = line_parts[1]
 				body = line_parts[3]
-				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body)).join()
 		
 				## Create and add users from the NAMES list.
 				if (line_parts[1] == "353"):
@@ -422,15 +433,15 @@ class Bot():
 				elif (mode_list[0] == "-o"):
 					self.removeOp(mode_list[1])
 				else:
-					pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Invalid MODE operation: \"" + mode_list[0] + "\". Ignoring."))
+					pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Invalid MODE operation: \"" + mode_list[0] + "\". Ignoring.")).join()
 					return
 				
-				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body))
+				pyayaBot_threading.writeToIRCLogThread(self, self.log.IRCMessage(self.log, type, body)).join()
 					
 			elif (line_parts[1] == "PRIVMSG"):
 				user = line_parts[0]
 				body = line_parts[3][1:].rstrip()
-				pyayaBot_threading.writeToChatLogThread(self, self.log.ChatMessage(self.log, user, body))
+				pyayaBot_threading.writeToChatLogThread(self, self.log.ChatMessage(self.log, user, body)).join()
 			
 				## Check if the user is tracked. If not, add the user to the list.
 				if (self.getIfKnownUser(user) == 0):
@@ -439,12 +450,12 @@ class Bot():
 				## Parse the chat message from the user to determine if a command was issued.
 				if (self.bool_basic_feature_set == 1):
 					if (self.basic_feature_set.checkIfCommand(body)):
-						pyayaBot_threading.executeCommandThread(self, self.basic_feature_set.Command(user, body))
-			
+						pyayaBot_threading.executeCommandThread(self, self.basic_feature_set.Command(user, body)).join()
+
 			else:
-				pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Unknown message type received from twitch.tv IRC server: \"" + line_parts[1] + "\". Ignoring."))	
+				pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Unknown message type received from twitch.tv IRC server: \"" + line_parts[1] + "\". Ignoring.")).join()
 		else:
-			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Unexpected # of words in message \"" + line + " \". Ignoring"))	
+			pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "WARNING", "Unexpected # of words in message \"" + line + " \". Ignoring")).join()
 
 	## printAdmins - Prints out list of admins.
 	def printAdmins(self):
@@ -485,7 +496,7 @@ class Bot():
 					if (user.name == n):
 						user.setIsAdmin(0)
 				
-				pyayaBot_threading.writeToAdminLogThread(self, self.log.AdminMessage(self.log, "REMOVED ADMIN", n))
+				pyayaBot_threading.writeToAdminLogThread(self, self.log.AdminMessage(self.log, "REMOVED ADMIN", n)).join()
 						
 		#self.printAdmins()
 		
@@ -505,7 +516,7 @@ class Bot():
 					if (user.name == n):
 						user.setIsOp(0)
 				
-				pyayaBot_threading.writeToAdminLogThread(self, self.log.AdminMessage(self.log, "REMOVED OP", n))
+				pyayaBot_threading.writeToAdminLogThread(self, self.log.AdminMessage(self.log, "REMOVED OP", n)).join()
 
 		#self.printOps()
 		
@@ -522,13 +533,14 @@ class Bot():
 	def sendChatMessage(self, t):
 		print ":pyayabot!pyayabot@pyayabot.tmi.twitch.tv PRIVMSG #" + self.channel + " :" + t
 		self.twitch.send("PRIVMSG #" + self.channel + " :" + t + "\r\n")
-		pyayaBot_threading.writeToChatLogThread(self, self.log.ChatMessage(self.log, ":pyayabot!pyayabot@pyayabot.tmi.twitch.tv", t))
+		pyayaBot_threading.writeToChatLogThread(self, self.log.ChatMessage(self.log, ":pyayabot!pyayabot@pyayabot.tmi.twitch.tv", t)).join()
 		
 	## This method gracefully disconnects the bot from the channel and exits.
 	def shutdownBot(self):
+		self.bool_shutdown = 1
 		self.sendChatMessage("Shutting down...")
 		self.twitch.close()
-		pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "INFO", "Bot shutdown via chat."))
+		pyayaBot_threading.writeToSystemLogThread(self, self.log.SystemMessage(self.log, "INFO", "Bot shutdown via chat.")).join()
 		
 		## Write the closing HTML tags to the log files.
 		self.log.writeLogFooters(self.log.system_log_path)
@@ -536,10 +548,12 @@ class Bot():
 		self.log.writeLogFooters(self.log.irc_log_path)
 		self.log.writeLogFooters(self.log.admin_log_path)
 		
-		## Shut the bot down. (Kills the last 2 threads (parseLineFromTwitchThread and mainThread)
+		print "\nWaiting on the follow child threads to return...\n"
+		for thread in pyayaBot_threading.threading.enumerate():
+			print str(thread)
+
 		sys.exit()
-		sys.exit()
-	
+			
 	## Bot.User - Contains information and methods for users in chat.
 	class User():
 		## __init__ - Initialize the attributes of a User object.
