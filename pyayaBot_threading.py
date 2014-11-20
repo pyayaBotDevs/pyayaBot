@@ -31,7 +31,7 @@ class executeCommandThread(threading.Thread):
 	## exit - Exits the current thread.
 	def exit(self):
 		sys.exit()
-		
+
 	## run - This method calls the parseLineFromTwitch method.
 	def run(self):
 		self.parent.basic_feature_set.executeCommand(self.command)
@@ -50,11 +50,11 @@ class parseLineFromTwitchThread(threading.Thread):
 		self.thread_id = threading.activeCount() + 1
 		self.line      = line
 		self.start()
-		
+
 	## exit - Exits the current thread.
 	def exit(self):
 		sys.exit()
-		
+
 	## run - This method calls the parseLineFromTwitch method.
 	def run(self):
 		self.parent.parseLineFromTwitch(self.line)
@@ -75,24 +75,26 @@ class sendMotdThread(threading.Thread):
 		self.delay       = delay
 		self.bool_update = 0
 		self.start()
-		
+
 	## exit - Exits the current thread.
 	def exit(self):
 		sys.exit()
-		
+
 	## run - Performs the chain of method executions.
 	def run(self):
-		while(self.parent.bool_shutdown == 0):			
-			time.sleep(self.delay)
-			if (self.parent.bool_shutdown == 0):
-				self.parent.basic_feature_set.sendMotd()
-		
+		for x in range(int(self.delay)):
+			time.sleep(1)
+			if (self.parent.bool_shutdown == 1):
+				return
+
+		self.parent.basic_feature_set.sendMotd()
+
 	## updateDelay - Updates the amount of time to wait before sending the MOTD.
 	def updateDelay(self, delay):
 		self.delay = delay
-		
+
 ## End of the sendMotdThread class.
-		
+
 ## writeToAdminLogThread - A thread which writes an entry to the Admin log file.
 class writeToAdminLogThread(threading.Thread):
 	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
@@ -109,13 +111,13 @@ class writeToAdminLogThread(threading.Thread):
 	## exit - Exits the current thread.
 	def exit(self):
 		sys.exit()
-		
+
 	## run - Performs the chain of method executions.
 	def run(self):
 		self.parent.log.writeToAdminLog(self.message)
-		
+
 ## End of writeToAdminlogThread class.
-		
+
 ## writeToChatLogThread - A thread which writes an entry to the chat log file.
 class writeToChatLogThread(threading.Thread):
 	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
@@ -132,11 +134,11 @@ class writeToChatLogThread(threading.Thread):
 	## exit - Exits the current thread.
 	def exit(self):
 		sys.exit()
-		
+
 	## run - Performs the chain of method executions.
 	def run(self):
 		self.parent.log.writeToChatLog(self.message)
-		
+
 ## End of writeToChatlogThread class.
 
 ## writeToIRClogThread - A thread which writes an entry to the IRC log file.
@@ -155,11 +157,11 @@ class writeToIRCLogThread(threading.Thread):
 	## exit - Exits the current thread.
 	def exit(self):
 		sys.exit()
-		
+
 	## run - Performs the chain of method executions.
 	def run(self):
 		self.parent.log.writeToIRCLog(self.message)
-		
+
 ## End of writeToIRClogThread class.
 
 ## writeToSystemLogThread - A thread which writes an entry to the System log file.
@@ -174,13 +176,13 @@ class writeToSystemLogThread(threading.Thread):
 		self.thread_id = threading.activeCount() + 1
 		self.message   = message
 		self.start()
-		
+
 	## exit - Exits the current thread.
 	def exit(self):
 		sys.exit()
-		
+
 	## run - Performs the chain of method executions.
 	def run(self):
 		self.parent.log.writeToSystemLog(self.message)
-		
+
 ## End of writeToSystemlogThread class.
