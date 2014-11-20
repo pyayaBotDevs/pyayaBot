@@ -8,8 +8,8 @@ if (len(sys.argv) != 3):
 	sys.exit()
 
 ## Initialize test variables.
-test_connection_config = "./connection_config." + sys.argv[2]
-test_channel_config    = "./channel_config_" + sys.argv[1] + "." + sys.argv[2]
+test_connection_config = "./config/connection_config." + sys.argv[2]
+test_channel_config    = "./config/channel_config_" + sys.argv[1] + "." + sys.argv[2]
 
 ## This int will be turned a list of binary values to control lagging.
 ## INFO Logging    - Add 8

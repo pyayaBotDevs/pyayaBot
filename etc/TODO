@@ -1,0 +1,16 @@
+[Long-Term Goals]
+pyayaBot instance will be hosted off of a test server hosted by Albinohat.
+Users of Twitch.tv will be able to spin up instances of pyayaBot from a Twitch chatroom.
+
+[Albinohat]
+Deploy a test server. (Linux)
+Create user account for Devezich on the test server.
+
+[Devezich]
+Create a simple bot to deploy new instances of pyayaBot pyayaBot's Twitch chat.
+Write main deployment script.
+Write script to generate channel configurations.
+
+[Unassigned]
+Write unit tests for all methods in pyayaBot_main.py
+Write unit tests for all methods in pyayaBot_featureSets.py

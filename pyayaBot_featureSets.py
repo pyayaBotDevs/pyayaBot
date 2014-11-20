@@ -28,7 +28,7 @@
 ##
 ## ==QuakeLiveFeatureSet==
 ## Implement Challonge.com integration [ NOT STARTED ]
-## Implement QLRanks integration [ NOT STARTED ]
+## Implement QLRanks integration [ IN-PROGRESS ]
 ##    Implement !qlplayer command [ IN-PROGRESS ]
 ##      Implement QLPlayer class [ IN-PROGRESS ]
 ##
@@ -36,7 +36,7 @@
 ## Implement displaying metadata of a YouTube video upon seeing a YouTube video link in chat. [ NOT STARTED ]
 
 ## BUG FIXES
-## Fixed a bug where sending unexpected admin-level or op-level could cause a crash.
+## Fixed a bug where all commands were subject to cooldowns. Should be user only.
 
 ## Standard Imports
 import re, time
@@ -76,19 +76,19 @@ class BasicFeatureSet():
 	def executeCommand(self, c):
 		## Look up the User object associated with the username who sent the command.
 		for user in self.parent.list_of_users:
-			if ((user.name == c.user) and (time.time() - user.last_command_time > self.global_cooldown) and (time.time() - user.last_command_time > self.user_cooldown)):
+			if (user.name == c.user):
 				## ADMIN-level commands - Verify that the User is an admin.
 				if (c.level == "ADMIN" and user.bool_isadmin == 1):
 					if (re.match("^shutdown$", c.name.lower())):
-						self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "ADMIN-level SHUTDOWNBOT command issued by " + c.user))
+						self.parent.log.writeToSystemLog(pyayaBot_main.SystemMessage(self.parent.log, "INFO", "ADMIN-level SHUTDOWNBOT command issued by " + c.user))
 						self.parent.shutdownBot()
 
 				## MOD-level commands - Verify that the User is an op.
-				if (c.level == "OP" and (user.bool_isop == 1 or user.bool_isadmin == 1)):
+				elif (c.level == "OP" and (user.bool_isop == 1 or user.bool_isadmin == 1)):
 					## YO Command - Simple example of bot responding to user input.
 					if (re.match("yo", c.name.lower())):
 						self.parent.sendChatMessage("Adrian!")
-						self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "OP-level YO command issued by " + c.user))
+						self.parent.log.writeToSystemLog(pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level YO command issued by " + c.user))
 
 					## SET Commands
 					if (re.match("^set", c.name.lower())):
@@ -104,12 +104,12 @@ class BasicFeatureSet():
 						elif (re.match("^set cooldown global ", c.name.lower())):	
 							self.setGlobalCooldown(c)
 
-						elif (re.match("^set cooldown global ", c.name.lower())):
-							elf.setUserCooldown(c)
+						elif (re.match("^set cooldown user ", c.name.lower())):
+							self.setUserCooldown(c)
 
 				## USER-level commands - No User verification required.
 				## Update the user's timer for flood protection.
-				if (c.level == "USER"):
+				elif ((c.level == "USER") and (time.time() - user.last_command_time > self.global_cooldown) and (time.time() - user.last_command_time > self.user_cooldown)):
 					bool_valid_command = 1
 
 					## BasicFeatureSet commands.
@@ -136,7 +136,7 @@ class BasicFeatureSet():
 						user.updateLastCommandTime()
 
 				else:
-					self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "WARNING", "INVALID-level command \"" + c.name + "\" issued by " + c.user))
+					self.parent.log.writeToSystemLog(pyayaBot_main.SystemMessage(self.parent.log, "WARNING", "INVALID-level command \"" + c.name + "\" issued by " + c.user + ". Ignoring."))
 
 	## getMotd - Returns the message of the day.
 	def getMotd(self):
@@ -163,24 +163,10 @@ class BasicFeatureSet():
 		if (len(c.name) > 18 and len(c.name) < 260):
 			self.motd = c.name.split(" ", 2)[2]
 			self.parent.sendChatMessage("MOTD updated successfully!")
-			self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "OP-level MOTD SET command issued by " + c.user))
+			pyayaBot_main.LogFairy.writeToSystemLog(pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level MOTD SET command issued by " + c.user))
 		else:
 			self.parent.sendChatMessage("Invalid SET MOTD command. Syntax: @set motd [Message]")
 			self.parent.sendChatMessage("Message must be between 10 and 250 characters.")
-
-	## setUserCooldown - Change the cooldown time between command executions for users.
-	## c               - A command instance containing the new time (in seconds) to wait between sending the MOTD.
-	def setGlobalCooldown(self, c):
-		new_value = c.name.split(" ", 3)[3]
-
-		if (new_value.isdigit() and (int(new_value) >= 0 and int(new_value) <= 3600)):
-			self.user_cooldown = float(new_value)
-
-			self.parent.sendChatMessage("User cooldown updated successfully!")
-			self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "OP-level SET COOLDOWN USER command issued by " + c.user))
-		else:
-			self.parent.sendChatMessage("Invalid SET COOLDOWN USER command. Syntax: @set cooldown user [Number]")
-			self.parent.sendChatMessage("Number must be between 0 and 3600.")
 
 	## setGlobalCooldown - Change the cooldown time between command executions globally.
 	## c                 - A command instance containing the new time (in seconds) to wait between sending the MOTD.
@@ -191,9 +177,23 @@ class BasicFeatureSet():
 			self.global_cooldown = float(new_value)
 			
 			self.parent.sendChatMessage("Global cooldown updated successfully!")
-			self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "OP-level SET COOLDOWN GLOBAL command issued by " + c.user))
+			self.parent.log.writeToSystemLog(pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level SET COOLDOWN GLOBAL command issued by " + c.user))
 		else:
 			self.parent.sendChatMessage("Invalid SET COOLDOWN GLOBAL command. Syntax: @set cooldown global [Number]")
+			self.parent.sendChatMessage("Number must be between 0 and 3600.")
+
+	## setUserCooldown - Change the cooldown time between command executions for users.
+	## c               - A command instance containing the new time (in seconds) to wait between sending the MOTD.
+	def setUserCooldown(self, c):
+		new_value = c.name.split(" ", 3)[3]
+
+		if (new_value.isdigit() and (int(new_value) >= 0 and int(new_value) <= 3600)):
+			self.user_cooldown = float(new_value)
+
+			self.parent.sendChatMessage("User cooldown updated successfully!")
+			self.parent.log.writeToSystemLog(pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level SET COOLDOWN USER command issued by " + c.user))
+		else:
+			self.parent.sendChatMessage("Invalid SET COOLDOWN USER command. Syntax: @set cooldown user [Number]")
 			self.parent.sendChatMessage("Number must be between 0 and 3600.")
 
 	## setMotdTimer - Changes the time the bot waits between sending the MOTD.
@@ -206,43 +206,43 @@ class BasicFeatureSet():
 			self.parent.send_motd_thread.updateDelay(self.motd_timer)
 
 			self.parent.sendChatMessage("MOTD timer updated successfully!")
-			self.parent.log.writeToSystemLog(self.parent.log.SystemMessage(self.parent.log, "INFO", "OP-level SET TIMER MOTD command issued by " + c.user))
+			self.parent.log.writeToSystemLog(pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level SET TIMER MOTD command issued by " + c.user))
 		else:
 			self.parent.sendChatMessage("Invalid SET TIMER MOTD command. Syntax: @set timer motd [Number]")
 			self.parent.sendChatMessage("Number must be between 300 and 3600.")
-
-	## BasicFeatureSet.Command - Contains the text and level of a command.
-	class Command():
-		## __init__ - This method initializes the command instance.
-		## self.user  - The user who issued the command.
-		## self.name  - The name of the command without the prefix. (!, @ or #)
-		## self.level - The level of access required to execute the command. (USER, MOD or ADMIN)
-		## u          - The user who sent the text. Sent from BasicFeatureSet.parseLineFromChat as a string.
-		## t          - The text sent from BasicFeatureSet.parseLineFromChat as a string.
-		def __init__(self, u, t):
-			self.user = u
-			self.name = t[1:]
-
-			if (t[0] == "!"):
-				self.level = "USER"
-			elif (t[0] == "@"):
-				self.level = "OP"
-			elif (t[0] == "$"):
-				self.level = "ADMIN"
-			else:
-				self.level = "INVALID"
-			#self.printCommand()
-
-		## printCommand - This method will print the attributes of the BasicFeatureSet.Command instance.
-		def printCommand(self):
-			print "    BasicFeatureSet.Command.printCommand()"
-			print "        self.user = " + self.user
-			print "        self.name = " + self.name
-			print "        self.level = " + self.level
-
-	## End of BasicFeatureSet.Command class.
-
+			
 ## End of BasicFeatureSet class.
+
+## Command - Contains the text and level of a command.
+class Command():
+	## __init__ - This method initializes the command instance.
+	## self.user  - The user who issued the command.
+	## self.name  - The name of the command without the prefix. (!, @ or #)
+	## self.level - The level of access required to execute the command. (USER, MOD or ADMIN)
+	## u          - The user who sent the text. Sent from BasicFeatureSet.parseLineFromChat as a string.
+	## t          - The text sent from BasicFeatureSet.parseLineFromChat as a string.
+	def __init__(self, u, t):
+		self.user = u
+		self.name = t[1:]
+
+		if (t[0] == "!"):
+			self.level = "USER"
+		elif (t[0] == "@"):
+			self.level = "OP"
+		elif (t[0] == "$"):
+			self.level = "ADMIN"
+		else:
+			self.level = "INVALID"
+		#self.printCommand()
+
+	## printCommand - This method will print the attributes of the BasicFeatureSet.Command instance.
+	def printCommand(self):
+		print "    BasicFeatureSet.Command.printCommand()"
+		print "        self.user = " + self.user
+		print "        self.name = " + self.name
+		print "        self.level = " + self.level
+
+## End of Command class.			
 
 ## This class contains methods which supply information related to the game Quake Live.
 class QuakeLiveFeatureSet():
@@ -277,16 +277,16 @@ class QuakeLiveFeatureSet():
 	def parseQLRankpage(self, c):
 		print "placeholder"
 
-	## QuakeLiveFeatureSet.QLPlayer - This class contains various stats for a QL player across all tracked game types.
-	class QLPlayer():
-		## __init__ - This method initializes the command instance.
-		## self.name        - The username of the QL player.
-		## self.stats       - Vital stats about the player across all game types. Holds strings for each game type.
-		## self.maps        - The top played maps by the player across all game types.
-		## self.recentgames - The recent games played by the player.
-		def __init__():
-			self.name = "Placeholder"
-
-	## End of QuakeLiveFeatureSet.QLPlayer class.
-
 ## End of QuakeLiveFeatureSet class.
+
+## QLPlayer - This class contains various stats for a QL player across all tracked game types.
+class QLPlayer():
+	## __init__ - This method initializes the command instance.
+	## self.name        - The username of the QL player.
+	## self.stats       - Vital stats about the player across all game types. Holds strings for each game type.
+	## self.maps        - The top played maps by the player across all game types.
+	## self.recentgames - The recent games played by the player.
+	def __init__():
+		self.name = "Placeholder"
+
+## End of QLPlayer class.

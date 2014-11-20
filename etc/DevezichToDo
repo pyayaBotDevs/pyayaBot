@@ -1,0 +1,9 @@
+Devezich To Do List:
+Something to generate channel config files
+
+Main deployment script
+
+Create a simple bot to deploy new instances of pyayaBot pyayaBot's Twitch chat:
+deploy bot in a way similar to the unit test->what vars need to be passed to start the bot
+must have command line arguments (no hard coding)
+config file generation
