@@ -8,3 +8,5 @@
 logs/
 test_scripts/
 config/
+
+# End of .gitignore. And now I won't forge the pesky newline.
