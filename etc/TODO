@@ -12,5 +12,9 @@ Write main deployment script.
 Write script to generate channel configurations.
 
 [Unassigned]
-Write unit tests for all methods in pyayaBot_main.py
-Write unit tests for all methods in pyayaBot_featureSets.py
+Write unit tests for all methods in pyayaBot_main.py [ BACKLOG ]
+Write unit tests for all methods in pyayaBot_featureSets.py [ BACKLOG ]
+Write unit tests for all methods in pyayaBot_threading.py [ BACKLOG ]
+Insert debug logging for in pyayaBot_main.py [ BACKLOG ]
+Insert debug logging for in pyayaBot_featureSets.py [ BACKLOG ]
+Insert debug logging for in pyayaBot_threading.py [ BACKLOG ]
