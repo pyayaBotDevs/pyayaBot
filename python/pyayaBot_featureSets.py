@@ -10,25 +10,18 @@
 ##   Logging [ DONE ]
 ##
 ## ==BasicFeatureSet==
-## Implement log threading. [ NOT STARTED ]
-## Implement command flood protection on a global basis. [ DONE ] 
-## Implement command flood protection on a per-user basis. [ DONE ]
-## Rework MOTD SET into a SET [setting] [ DONE ]
-##    Second word is what you are setting. Third + will be the new value.
-## Rework MOTD TIMER into a SET TIMER [type] command [ DONE ]
+## Implement a !help command to link to the GitHub README. [ NOT STARTED ]
+##    Of course this means I also need to make the command reference.
 ##
 ## ==ModerationFeatureSet==
 ## Implement kick/ban detection. [ NOT STARTED ]
 ##   Requires joining #jtv [ NOT STARTED ] (Work also required in main)
-## Insert Admin logging into timeout/ban detection. [ NOT STARTED ]
+##   Insert Admin logging into timeout/ban detection. [ NOT STARTED ]
 ##
 ## ==OsuFeatureSet==
 ## Implement displaying metadata of a YouTube video upon seeing an osu! beatmap link. [ NOT STARTED ]
 ##
 ## ==QLRanksFeatureSet==
-## Implement QLRanks integration [ DONE ]
-##   Implement !qlr command [ DONE ]
-##   Implement QLPlayer class [ DONE ]
 ##
 ## ==YouTubeFeatureSet==
 ## Implement displaying metadata of a YouTube video upon seeing a YouTube video link in chat. [ NOT STARTED ]
@@ -140,36 +133,44 @@ class BasicFeatureSet():
 				## Update the user's timer for flood protection.
 				elif ((c.level == "USER") and (time.time() - user.last_command_time > self.global_cooldown) and (time.time() - user.last_command_time > self.user_cooldown)):
 					## BasicFeatureSet commands - No prefix.
+					## BUG COMMAND - Sends the bug report URL to the chat.
+					if (re.match("^bug$", c.name.lower())):
+						self.parent.sendChatMessage("Bugs and feature requests can be submitted here: https://github.com/pyayaBotDevs/pyayaBot/issues/new")
+
+					## HELP COMMAND - Sends the command reference URL to the chat.
+					elif (re.match("^help$", c.name.lower())):
+						self.parent.sendChatMessage("pyayaBot Command Reference: https://github.com/pyayaBotDevs/pyayaBot/wiki/pyayaBot-Command-Reference")
+
 					## MOTD COMMAND - Sends the MOTD to the chat.
-					if (re.match("^motd$", c.name.lower())):
+					elif (re.match("^motd$", c.name.lower())):
 						self.sendMotd()
 
 					## QLRanksFeatureSet commands - qrl prefix.
 					## QLRANK COMMANDS - These commands offer functionality from QLRanks.com
-					elif ((re.match("^qlrank", c.name.lower())) and (self.parent.bool_qlranks_feature_set == 1)):
+					elif ((re.match("^qlranks", c.name.lower())) and (self.parent.bool_qlranks_feature_set == 1)):
 						## QLRANK LASTGAME COMMAND - Sends info about a player's last played game to the chat.
-						if (re.match("^qlrank\s+lastgame\s+[a-zA-Z_]+", c.name.lower())):
+						if (re.match("^qlranks\s+lastgame\s+[a-zA-Z_]+", c.name.lower())):
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
 								pyayaBot_threading.AddQLPlayerAndSendQLPlayerLastGameThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
 								self.parent.qlranks_feature_set.sendQLPlayerLastGame(self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name))						
 
 						## QLRANK MAPS COMMAND	- Sends a player's 3 most played maps to the chat.
-						elif (re.match("^qlrank\s+maps\s+[a-zA-Z0-9_]+", c.name.lower())):
+						elif (re.match("^qlranks\s+maps\s+[a-zA-Z0-9_]+", c.name.lower())):
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
 								pyayaBot_threading.AddQLPlayerAndSendQLPlayerMapsThread(self.parent, self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
 								self.parent.qlranks_feature_set.sendQLPlayerMaps(self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name))
 						
 						## QLRANK PROFILE COMMAND - Sends the URL to a player's QLRanks profile to the chat.
-						elif (re.match("^qlrank\s+profile\s+[a-zA-Z0-9_]+", c.name.lower())):
+						elif (re.match("^qlranks\s+profile\s+[a-zA-Z0-9_]+", c.name.lower())):
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
 								pyayaBot_threading.AddQLPlayerAndSendQLPlayerProfileThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
 								self.parent.qlranks_feature_set.sendQLPlayerProfile(self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name))
 						
 						## QRL STATS COMMAND - Sends a player's vitial stats to the chat.
-						elif (re.match("^qlrank\s+stats\s+[a-zA-Z0-9_]+", c.name.lower())):
+						elif (re.match("^qlranks\s+stats\s+[a-zA-Z0-9_]+", c.name.lower())):
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
 								pyayaBot_threading.AddQLPlayerAndSendQLPlayerStatsThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
@@ -180,12 +181,11 @@ class BasicFeatureSet():
 
 					else:
 						bool_valid_command = 0		
+				else:
+					pyayaBot_threading.WriteToSystemLogThread(self.parent, pyayaBot_main.SystemMessage(self.parent.log, "WARNING", "INVALID-level command \"" + c.name + "\" issued by " + c.user + ". Ignoring.")).join()
 
 				if (bool_valid_command == 1):
 					user.updateLastCommandTime()
-
-				else:
-					pyayaBot_threading.WriteToSystemLogThread(self.parent, pyayaBot_main.SystemMessage(self.parent.log, "WARNING", "INVALID-level command \"" + c.name + "\" issued by " + c.user + ". Ignoring.")).join()
 
 	## getMotd - Returns the message of the day.
 	def getMotd(self):

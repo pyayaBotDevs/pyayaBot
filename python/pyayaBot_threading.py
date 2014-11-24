@@ -4,6 +4,8 @@
 
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ## Implement addQLPlayerThread class [ IN-PROGRESS ]
+## Merge the 4 addQLPlayerAndSendQLPlayerXThread classes into one class. [ NOT STARTED ]
+## Merge the 4 writeToXLogThread classes into one class.
 
 ## BUG FIXES
 ## 
