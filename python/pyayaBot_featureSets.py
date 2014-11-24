@@ -12,6 +12,7 @@
 ## ==BasicFeatureSet==
 ## Implement a !help command to link to the GitHub README. [ NOT STARTED ]
 ##    Of course this means I also need to make the command reference.
+## Implement chat messages letting users know when a feature set's commands are unavailable. [ NOT STARTED ]
 ##
 ## ==ModerationFeatureSet==
 ## Implement kick/ban detection. [ NOT STARTED ]
@@ -151,14 +152,14 @@ class BasicFeatureSet():
 						## QLRANK LASTGAME COMMAND - Sends info about a player's last played game to the chat.
 						if (re.match("^qlranks\s+lastgame\s+[a-zA-Z_]+", c.name.lower())):
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
-								pyayaBot_threading.AddQLPlayerAndSendQLPlayerLastGameThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
+								pyayaBot_threading.addQLPlayerAndSendQLPlayerLastGameThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
 								self.parent.qlranks_feature_set.sendQLPlayerLastGame(self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name))						
 
 						## QLRANK MAPS COMMAND	- Sends a player's 3 most played maps to the chat.
 						elif (re.match("^qlranks\s+maps\s+[a-zA-Z0-9_]+", c.name.lower())):
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
-								pyayaBot_threading.AddQLPlayerAndSendQLPlayerMapsThread(self.parent, self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
+								pyayaBot_threading.AddQLPlayerAndSendQLPlayerMapsThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
 								self.parent.qlranks_feature_set.sendQLPlayerMaps(self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name))
 						
@@ -260,9 +261,9 @@ class BasicFeatureSet():
 	## setMotd - Changes the current message of the day.
 	## c       - The command object containing the user and new MOTD text.
 	def setMotd(self, c):
-		new_value = re.split("\s+", c.name, 3)[3].strip()
+		new_value = re.split("\s+", c.name, 2)[2].strip()
 		if (len(new_value) > 10 and len(new_value) < 500):
-			self.motd = re.split("\s+", c.name, 2)[2]
+			self.motd = new_value
 			self.parent.sendChatMessage("MOTD updated successfully!")
 			pyayaBot_threading.WriteToSystemLogThread(self.parent, pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level MOTD SET command issued by " + c.user + ". New value: " + self.motd + ".")).join()
 		
@@ -289,7 +290,7 @@ class BasicFeatureSet():
 	def setCooldownMotd(self, c):
 		new_value = re.split("\s+", c.name, 3)[3]
 
-		if ((int(new_value) >= 300 and int(new_value) <= 3600)):
+		if (new_value.isdigit() and (int(new_value) >= 300 and int(new_value) <= 3600)):
 			self.motd_cooldown = float(new_value)
 			self.parent.send_motd_thread.updateDelay(self.motd_cooldown)
 			self.parent.sendChatMessage("MOTD cooldown updated successfully!")
@@ -499,15 +500,13 @@ class QLRanksFeatureSet():
 			if (re.match(".*[a-zA-Z0-9_.]+\.jpg.*", str(player_games[x]))):
 				player_last_game.append(re.sub("_[vV0-9_.]+\.jpg", "", re.findall("[a-zA-Z0-9_.]+\.jpg", str(player_games[x]))[0]))
 		
-		player_last_game[0] = player_last_game[0] + "(Winner) "
+		player_last_game[0] = player_last_game[0] + " (Winner)"
 		player_last_game[1] = player_last_game[1] + "-"
 		player_last_game[2] = player_last_game[2] + " "
 		player_last_game[3] = player_last_game[3] + " "
-		player_last_game[4] = "Map: " + player_last_game[4]
+		player_last_game[4] = "| Map: " + player_last_game[4]
 			
-		last_game_string = ""
-		for game_detail in player_last_game:
-			last_game_string = last_game_string + game_detail
+		last_game_string = player_last_game[0] + " VS " + player_last_game[3] + player_last_game[1] + player_last_game[2] + player_last_game[4]
 		
 		return player_name, last_game_string, maps_string, player_profile, player_stats
 

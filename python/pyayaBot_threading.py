@@ -17,7 +17,7 @@
 import threading, time
 
 ## Third-party imports
-import pyayaBot_main
+import pyayaBot_main, pyayaBot_featureSets
 
 ## addQLPlayerThreadAndSendQLPlayerLastGame - A thread which initializes a QLPlayer object by parsing a QLRanks webpage and sends the QL player's last game to the chat.
 class addQLPlayerAndSendQLPlayerLastGameThread(threading.Thread):
@@ -41,7 +41,7 @@ class addQLPlayerAndSendQLPlayerLastGameThread(threading.Thread):
 ## End of AddQLPlayerThreadAndSendQLPlayerLastGameThread class
 
 ## AddQLPlayerAndSendQLPlayerMapThread - A thread which initializes a QLPlayer object by parsing a QLRanks webpage and sends the QL player's top 3 most played maps to the chat.
-class AddQLPlayerAndSendQLPlayerMapThread(threading.Thread):
+class AddQLPlayerAndSendQLPlayerMapsThread(threading.Thread):
 	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
 	## self.grand_parent - The pyayaBot_main.Bot instance which spawned this thread.
 	## self.thread_id    - A unique ID assigned to each thread.

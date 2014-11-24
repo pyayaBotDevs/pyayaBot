@@ -222,7 +222,7 @@ class Bot():
 		## Initialize booleans to enable or disable feature sets.
 		self.bool_basic_feature_set     = 0
 		self.bool_osu_feature_set       = 0
-		self.bool_quakelive_feature_set = 0
+		self.bool_qlranks_feature_set   = 0
 		self.bool_youtube_featre_set    = 0	
 
 		## Call the methods to initialize the specified feature sets in the list.
