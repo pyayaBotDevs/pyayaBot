@@ -154,6 +154,7 @@ class BasicFeatureSet():
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
 								pyayaBot_threading.addQLPlayerAndSendQLPlayerLastGameThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
+								self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name).updateQLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))
 								self.parent.qlranks_feature_set.sendQLPlayerLastGame(self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name))						
 
 						## QLRANK MAPS COMMAND	- Sends a player's 3 most played maps to the chat.
@@ -161,6 +162,7 @@ class BasicFeatureSet():
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
 								pyayaBot_threading.AddQLPlayerAndSendQLPlayerMapsThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
+								self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name).updateQLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))
 								self.parent.qlranks_feature_set.sendQLPlayerMaps(self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name))
 						
 						## QLRANK PROFILE COMMAND - Sends the URL to a player's QLRanks profile to the chat.
@@ -168,6 +170,7 @@ class BasicFeatureSet():
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
 								pyayaBot_threading.AddQLPlayerAndSendQLPlayerProfileThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
+								self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name).updateQLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))
 								self.parent.qlranks_feature_set.sendQLPlayerProfile(self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name))
 						
 						## QRL STATS COMMAND - Sends a player's vitial stats to the chat.
@@ -175,6 +178,7 @@ class BasicFeatureSet():
 							if (self.parent.qlranks_feature_set.checkIfKnownQLPlayer(self.parent.qlranks_feature_set.getQLPlayerName(c.name)) == 0):
 								pyayaBot_threading.AddQLPlayerAndSendQLPlayerStatsThread(self.parent, QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 							else:
+								self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name).updateQLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))
 								self.parent.qlranks_feature_set.sendQLPlayerStats(self.parent.qlranks_feature_set.getQLPlayerObjectByName(c.name))
 						
 						else:
@@ -571,5 +575,14 @@ class QLPlayer():
 		print "        self.maps: " + str(self.maps)
 		print "        self.profile: " + self.profile
 		print "        self.stats: " + self.stats
-
+		
+	## updateQLPlayer - This method will update the attributes of the QLPlayerInstance.
+	## player_info    - A tuple containing the information about the player.
+	def updateQLPlayer(self, player_info):
+		self.name        = player_info[0]
+		self.last_game   = player_info[1]
+		self.maps        = player_info[2]
+		self.profile     = player_info[3]
+		self.stats       = player_info[4]		
+		
 ## End of QLPlayer class.
