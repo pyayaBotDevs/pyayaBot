@@ -440,14 +440,22 @@ class QLRanksFeatureSet():
 	## command_text    - The command text containing name of the player to lookup.
 	def getQLPlayerSoup(self, command_text):
 		command_list = re.split("\s+", command_text, 3)
-		
+	
 		if (len(command_list) == 3):
 			player_name    = command_list[2]
+
+			## Give the chat feedback so they know it is wokring.
+			self.parent.sendChatMessage("I am looking up \"" + player_name + "\" now...") 
+
 			player_profile = "http://www.qlranks.com/duel/player/" + player_name
 			soup           = BeautifulSoup(urllib2.urlopen(player_profile).read())
-		
+
 		#elif (len(command_list) == 4):
 			#player_name    = command_list[3]
+
+			# Give the chat feedback so they know it is wokring.
+			#self.parent.sendChatMessage("I am looking up \"" + player_name + "\" now...") 
+
 			#player_profile = "http://www.qlranks.com/duel/player/" + player_name		
 			#soup           = BeautifulSoup(urllib2.urlopen("http://www.qlranks.com/" + command_list[2] + "/player/" + player_name).read())
 		
@@ -470,9 +478,6 @@ class QLRanksFeatureSet():
 		if (str(soup.title).find(player_name) == -1):
 			self.parent.sendChatMessage("No player with name " + player_name + " was found on QLRanks.") 
 			sys.exit()
-		
-		## Give the chat feedback so they know it is wokring.
-		self.parent.sendChatMessage("I am looked up \"" + player_name + "\" now...") 
 		
 		## Get the vital stats from the stats div and format it nicely for chat.
 		player_stats = soup.select("div #stats")[0].get_text().replace("Elo:", "| Elo:").replace("Ladder:", "| Ladder:").replace("Duels Tracked:", "| Duels Tracked:").replace("Win %:", "| Win %:").replace("TS %:", "| TS %:")
