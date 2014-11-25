@@ -146,16 +146,16 @@ class ParseLineFromTwitchThread(threading.Thread):
 ## SendMotdThread - A thread which sends the MOTD to the chat.
 class SendMotdThread(threading.Thread):
 	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.parent      - The pyayaBot_main.Bot instance which spawned this thread.
-	## self.thread_id   - A unique ID assigned to each thread.
-	## self.delay       - The amount of time to wait before sending the MOTD.
-	## self.bool_update - A boolean tracking whether or not to reset the loop with the new delay.
-	def __init__(self, parent, delay):
+	## self.parent            - The pyayaBot_main.Bot instance which spawned this thread.
+	## self.thread_id         - A unique ID assigned to each thread.
+	## self.delay             - The amount of time to wait before sending the MOTD.
+	## self.bool_motd_enabled - A boolean tracking whether or not to send the MOTD to the chat.
+	def __init__(self, parent, delay, bool_motd_enabled):
 		threading.Thread.__init__(self)
-		self.parent      = parent
-		self.thread_id   = threading.activeCount() + 1
-		self.delay       = delay
-		self.bool_update = 0
+		self.parent            = parent
+		self.thread_id         = threading.activeCount() + 1
+		self.delay             = delay
+		self.bool_motd_enabled = bool_motd_enabled
 		
 		self.start()
 
@@ -167,11 +167,18 @@ class SendMotdThread(threading.Thread):
 				if (self.parent.bool_shutdown == 1):
 					return
 
-			self.parent.basic_feature_set.sendMotd()
+			if (self.bool_motd_enabled == 1):
+				self.parent.basic_feature_set.sendMotd()
 
 	## updateDelay - Updates the amount of time to wait before sending the MOTD.
+	## delay       - The amount of time to wait before sending the MOTD.
 	def updateDelay(self, delay):
 		self.delay = delay
+
+	## updateBool - Updates the boolean tracking whether or not to send the MOTD to chat.
+	## bool       - The new value (0 or 1) to set.
+	def updateBool(self, bool):
+		self.bool_motd_enabled = bool
 
 ## End of the SendMotdThread class.
 

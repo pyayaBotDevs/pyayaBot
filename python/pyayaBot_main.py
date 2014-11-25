@@ -4,9 +4,6 @@
 
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ##
-## This is a list of things which need to be written or committed. ([ DONE ])
-## Update the channel configuration parser to handle objects with the name of feature sets. [ DONE ]
-## Remove INI configuration support. [ DONE ]
 
 ## BACKLOG [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ##
@@ -14,7 +11,6 @@
 
 ## BUG FIXES
 ##
-## socket.error would cause bot to hang.
 
 ## Standard Imports
 import json, os, re, socket, sys, time
@@ -235,7 +231,7 @@ class Bot():
 				print "BasicFeatureSet initialized!\n"
 
 				## Start the child thread to periodically send the MOTD.
-				self.send_motd_thread = pyayaBot_threading.SendMotdThread(self, self.basic_feature_set.motd_cooldown)
+				self.send_motd_thread = pyayaBot_threading.SendMotdThread(self, self.basic_feature_set.motd_cooldown, self.basic_feature_set.bool_motd_enabled)
 			
 			elif (fs["name"] == "OsuFeatureSet"):
 				## Instantiate OsuFeatureSet object here.

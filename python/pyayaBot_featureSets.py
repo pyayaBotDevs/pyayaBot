@@ -23,7 +23,8 @@
 ## Implement displaying metadata of a YouTube video upon seeing an osu! beatmap link. [ NOT STARTED ]
 ##
 ## ==QLRanksFeatureSet==
-##
+## Reimplement gametype searches using !qlranks [ NOT STARTED ]
+
 ## ==YouTubeFeatureSet==
 ## Implement displaying metadata of a YouTube video upon seeing a YouTube video link in chat. [ NOT STARTED ]
 
@@ -323,15 +324,16 @@ class BasicFeatureSet():
 	def toggleMotd(self, c):
 		if (self.bool_motd_enabled == 1):
 			self.bool_motd_enabled = 0
-
 			self.parent.sendChatMessage("MOTD Disabled.")
 			pyayaBot_threading.WriteToSystemLogThread(self.parent, pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level TOGGLE MOTD command issued by " + c.user + ". New value: " + str(self.bool_motd_enabled) + ". (Disabled)")).join()
+		
 		else:
 			self.bool_motd_enabled = 1
-
 			self.parent.sendChatMessage("MOTD Enabled.")
 			pyayaBot_threading.WriteToSystemLogThread(self.parent, pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level TOGGLE MOTD command issued by " + c.user + ". New value: " + str(self.bool_motd_enabled) + ". (Enabled)")).join()
-
+		
+		self.parent.send_motd_thread.updateBool(self.bool_motd_enabled)
+		
 ## End of BasicFeatureSet class.
 
 ## Command - Contains the text and level of a command.
