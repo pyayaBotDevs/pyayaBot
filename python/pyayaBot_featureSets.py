@@ -184,14 +184,16 @@ class BasicFeatureSet():
 						
 						else:
 							bool_valid_command = 0
-
+			
 					else:
-						bool_valid_command = 0		
+						bool_valid_command = 0	
+
+					if (bool_valid_command == 1):
+						user.updateLastCommandTime()
+						
 				else:
 					pyayaBot_threading.WriteToSystemLogThread(self.parent, pyayaBot_main.SystemMessage(self.parent.log, "WARNING", "INVALID-level command \"" + c.name + "\" issued by " + c.user + ". Ignoring.")).join()
 
-				if (bool_valid_command == 1):
-					user.updateLastCommandTime()
 
 	## getMotd - Returns the message of the day.
 	def getMotd(self):
