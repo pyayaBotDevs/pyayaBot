@@ -1,0 +1,19 @@
+This list shows what must be done across all or not-started feature sets.
+
+==ModerationFeatureSet==
+Implement kick/ban detection. [ NOT STARTED ]
+  Requires joining #jtv [ NOT STARTED ] (Work also required in main)
+  Insert Admin logging into timeout/ban detection. [ NOT STARTED ]
+
+==OsuFeatureSet==
+Implement displaying metadata of a YouTube video upon seeing an osu! beatmap link. [ NOT STARTED ]
+
+==YouTubeFeatureSet==
+Implement displaying metadata of a YouTube video upon seeing a YouTube video link in chat. [ NOT STARTED ]
+
+BACKLOG [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
+
+==All Feature Sets==
+
+Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
+

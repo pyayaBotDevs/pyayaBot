@@ -7,7 +7,7 @@
 
 ## BACKLOG [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ##
-## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeToSystemLog calls) [ NOT STARTED ]
+## Insert DEBUG-level system logging into existing methods. (Replace  '#' commented out print lines with writeLogMessage calls) [ NOT STARTED ]
 
 ## BUG FIXES
 ##
@@ -16,7 +16,7 @@
 import json, os, re, socket, sys, time
 
 ## Third-party Imports
-import pyayaBot_featureSets, pyayaBot_threading
+import pyayaBot_basicFeatureSet, pyayaBot_qlranksFeatureSet, pyayaBot_threading
 
 ## Bot - This class contains the most basic operations of pyayaBot.
 class Bot():
@@ -127,7 +127,7 @@ class Bot():
 				return
 
 		self.list_of_admins.append(n)
-		pyayaBot_threading.WriteToAdminLogThread(self, AdminMessage(self.log, "ADDED ADMIN", n))
+		pyayaBot_threading.WriteLogMessageThread(self.log, "admin", AdminMessage(self.log, "ADDED ADMIN", n))
 		
 		## Update the user object's isadmin boolean.
 		for user in self.list_of_users:
@@ -143,13 +143,13 @@ class Bot():
 		## Format the name in the long-version used by twitch.
 		n = ":" + n + "!" + n + "@" + n + ".tmi.twitch.tv"
 
-		## Avoid readding a username to the list.
+		## Avoid reading a username to the list.
 		for op in self.list_of_ops:
 			if (op == n):
 				return
 
 		self.list_of_ops.append(n)
-		pyayaBot_threading.WriteToAdminLogThread(self, AdminMessage(self.log, "ADDED OP", n))
+		pyayaBot_threading.WriteLogMessageThread(self.log, "admin", AdminMessage(self.log, "ADDED OP", n))
 
 		## Update the user object's isop boolean.
 		for user in self.list_of_users:
@@ -203,7 +203,7 @@ class Bot():
 			self.twitch.connect((self.host, self.port))
 		except socket.error:
 			print "Failed to connect to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")!"
-			pyayaBot_threading.WriteToSystemLogThread(self, SystemMessage(self.log, "ERROR", "Failed to connect to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")"))
+			pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "ERROR", "Failed to connect to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")"))
 			self.shutdownBot()
 
 		self.twitch.send("PASS %s\r\n" % self.oauth) 
@@ -211,7 +211,7 @@ class Bot():
 		self.twitch.send("USER %s %s bla :%s\r\n" % (self.ident, self.host, self.realname))
 		self.twitch.send("JOIN #%s\r\n" % self.channel)
 
-		pyayaBot_threading.WriteToSystemLogThread(self, SystemMessage(self.log, "INFO", "Successfully connected to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")"))
+		pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "INFO", "Successfully connected to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")"))
 
 	## initializeFeatureSets - This method initializes feature set objects.
 	def initializeFeatureSets(self):
@@ -226,12 +226,12 @@ class Bot():
 			## Initialize a BasicFeatureSet instance.
 			if (fs["name"] == "BasicFeatureSet"):
 				print "\nDetected BasicFeatureSet. Initializing..."
-				self.basic_feature_set = pyayaBot_featureSets.BasicFeatureSet(self, fs)
+				self.basic_feature_set      = pyayaBot_basicFeatureSet.BasicFeatureSet(self, fs)
 				self.bool_basic_feature_set = 1
-				print "BasicFeatureSet initialized!\n"
-
 				## Start the child thread to periodically send the MOTD.
-				self.send_motd_thread = pyayaBot_threading.SendMotdThread(self, self.basic_feature_set.motd_cooldown, self.basic_feature_set.bool_motd_enabled)
+				self.send_motd_thread       = pyayaBot_threading.SendMotdThread(self, self.basic_feature_set.motd_cooldown, self.basic_feature_set.bool_motd_enabled)
+
+				print "BasicFeatureSet initialized!\n"
 			
 			elif (fs["name"] == "OsuFeatureSet"):
 				## Instantiate OsuFeatureSet object here.
@@ -240,7 +240,7 @@ class Bot():
 			elif (fs["name"] == "QLRanksFeatureSet"):
 				print "Detected QLRanksFeatureSet. Initializing..."
 				## Instantiate QLRanksFeatureSet object here.
-				self.qlranks_feature_set = pyayaBot_featureSets.QLRanksFeatureSet(self, fs)
+				self.qlranks_feature_set      = pyayaBot_qlranksFeatureSet.QLRanksFeatureSet(self, fs)
 				self.bool_qlranks_feature_set = 1
 				print "QLRanksFeatureSet initialized!\n"
 
@@ -250,7 +250,7 @@ class Bot():
 			
 			else:
 				print "\nInvalid feature set \"" + fs["name"] + "\" detected. Ignoring...\n"
-				pyayaBot_threading.WriteToSystemLogThread(self, SystemMessage(self.log, "WARNING", "Invalid feature set \"" + fs["name"] + "\" detected. Ignoring."))
+				pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "WARNING", "Invalid feature set \"" + fs["name"] + "\" detected. Ignoring."))
 
 	## listenLoop - This method enters an infinite loop and listens for text from the twitch.tv IRC Server.
 	def listenLoop(self):
@@ -339,12 +339,12 @@ class Bot():
 	## line                - The message sent from listenLoop().
 	def parseLineFromTwitch(self, line):		
 		if (line == ""):
-			pyayaBot_threading.WriteToSystemLogThread(self, SystemMessage(self.log, "WARNING", "NULL message from twitch.tv IRC server. Ignoring.")).join()
+			pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "WARNING", "NULL message from twitch.tv IRC server. Ignoring.")).join()
 			return
 
 		line_parts = line.split(" ", 3)
 		if (len(line_parts) < 2):
-			pyayaBot_threading.WriteToSystemLogThread(self, SystemMessage(self.log, "WARNING", "Fragmented message \"" + line + "\" from twitch.tv IRC server. Ignoring.")).join()
+			pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "WARNING", "Fragmented message \"" + line + "\" from twitch.tv IRC server. Ignoring.")).join()
 			return
 
 		elif (len(line_parts) == 2):
@@ -354,20 +354,20 @@ class Bot():
 
 				type = line_parts[1]
 				body = "N/A"
-				pyayaBot_threading.WriteToIRCLogThread(self, IRCMessage(self.log, type, body))	.join()
+				pyayaBot_threading.WriteLogMessageThread(self.log, "irc", IRCMessage(self.log, type, body))	.join()
 
 		elif (len(line_parts) == 3):
 			if (line_parts[1] == "JOIN" and line_parts[2] == "#" + self.channel):
 				type = line_parts[1]
 				body = line_parts[0]
-				pyayaBot_threading.WriteToIRCLogThread(self, IRCMessage(self.log, type, body)).join()
+				pyayaBot_threading.WriteLogMessageThread(self.log, "irc", IRCMessage(self.log, type, body)).join()
 
 				self.addUserFromJoinMessage(body)
 
 			elif (line_parts[1] == "PART" and line_parts[2] == "#" + self.channel):
 				type = line_parts[1]
 				body = line_parts[0].strip()
-				pyayaBot_threading.WriteToIRCLogThread(self, IRCMessage(self.log, type, body)).join()
+				pyayaBot_threading.WriteLogMessageThread(self.log, "irc", IRCMessage(self.log, type, body)).join()
 
 				## Remove the user from the list of tracked users.
 				self.removeUser(body)
@@ -376,7 +376,7 @@ class Bot():
 			if (re.match("[0-9]{3}", line_parts[1]) and line_parts[2] == "pyayabot"):
 				type = line_parts[1]
 				body = line_parts[3]
-				pyayaBot_threading.WriteToIRCLogThread(self, IRCMessage(self.log, type, body)).join()
+				pyayaBot_threading.WriteLogMessageThread(self.log, "irc", IRCMessage(self.log, type, body)).join()
 
 				## Create and add users from the NAMES list.
 				if (line_parts[1] == "353"):
@@ -393,15 +393,15 @@ class Bot():
 				elif (mode_list[0] == "-o"):
 					self.removeOp(mode_list[1])
 				else:
-					pyayaBot_threading.WriteToSystemLogThread(self, SystemMessage(self.log, "WARNING", "Invalid MODE operation: \"" + mode_list[0] + "\". Ignoring.")).join()
+					pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "WARNING", "Invalid MODE operation: \"" + mode_list[0] + "\". Ignoring.")).join()
 					return
 
-				pyayaBot_threading.WriteToIRCLogThread(self, IRCMessage(self.log, type, body)).join()
+				pyayaBot_threading.WriteLogMessageThread(self.log, "irc", IRCMessage(self.log, type, body)).join()
 
 			elif (line_parts[1] == "PRIVMSG"):
 				user = line_parts[0]
 				body = line_parts[3][1:].rstrip()
-				pyayaBot_threading.WriteToChatLogThread(self, ChatMessage(self.log, user, body)).join()
+				pyayaBot_threading.WriteLogMessageThread(self.log, "chat", ChatMessage(self.log, user, body)).join()
 
 				## Check if the user is tracked. If not, add the user to the list.
 				if (self.getIfKnownUser(user) == 0):
@@ -410,11 +410,11 @@ class Bot():
 				## Parse the chat message from the user to determine if a command was issued.
 				if (self.bool_basic_feature_set == 1):
 					if (self.basic_feature_set.checkIfCommand(body)):
-						pyayaBot_threading.ExecuteCommandThread(self, pyayaBot_featureSets.Command(user, body)).join()
+						pyayaBot_threading.ExecuteCommandThread(self, pyayaBot_basicFeatureSet.Command(user, body)).join()
 			else:
-				pyayaBot_threading.WriteToSystemLogThread(self, SystemMessage(self.log, "WARNING", "Unknown message type received from twitch.tv IRC server: \"" + line_parts[1] + "\". Ignoring.")).join()
+				pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "WARNING", "Unknown message type received from twitch.tv IRC server: \"" + line_parts[1] + "\". Ignoring.")).join()
 		else:
-			pyayaBot_threading.WriteToSystemLogThread(self, SystemMessage(self.log, "WARNING", "Unexpected # of words in message \"" + line + " \". Ignoring")).join()
+			pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "WARNING", "Unexpected # of words in message \"" + line + " \". Ignoring")).join()
 
 	## printAdmins - Prints out list of admins.
 	def printAdmins(self):
@@ -455,7 +455,7 @@ class Bot():
 					if (user.name == n):
 						user.setIsAdmin(0)
 
-				pyayaBot_threading.WriteToAdminLogThread(self, AdminMessage(self.log, "REMOVED ADMIN", n)).join()
+				pyayaBot_threading.WriteLogMessageThread(self.log, "admin", AdminMessage(self.log, "REMOVED ADMIN", n)).join()
 
 		#self.printAdmins()
 
@@ -475,7 +475,7 @@ class Bot():
 					if (user.name == n):
 						user.setIsOp(0)
 
-				pyayaBot_threading.WriteToAdminLogThread(self, AdminMessage(self.log, "REMOVED OP", n)).join()
+				pyayaBot_threading.WriteLogMessage(self, "admin", AdminMessage(self.log, "REMOVED OP", n)).join()
 
 		#self.printOps()
 
@@ -492,14 +492,14 @@ class Bot():
 	def sendChatMessage(self, t):
 		print ":pyayabot!pyayabot@pyayabot.tmi.twitch.tv PRIVMSG #" + self.channel + " :" + t
 		self.twitch.send("PRIVMSG #" + self.channel + " :" + t + "\r\n")
-		pyayaBot_threading.WriteToChatLogThread(self, ChatMessage(self.log, ":pyayabot!pyayabot@pyayabot.tmi.twitch.tv", t)).join()
+		pyayaBot_threading.WriteLogMessageThread(self.log, "chat", ChatMessage(self.log, ":pyayabot!pyayabot@pyayabot.tmi.twitch.tv", t)).join()
 
 	## This method gracefully disconnects the bot from the channel and exits.
 	def shutdownBot(self):
 		self.bool_shutdown = 1
 		self.sendChatMessage("Shutting down...")
 		self.twitch.close()
-		pyayaBot_threading.WriteToSystemLogThread(self, SystemMessage(self.log, "INFO", "Bot shut-down via chat.")).join()
+		pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "INFO", "Bot shut-down via chat.")).join()
 
 		## Write the closing HTML tags to the log files.
 		self.log.writeLogFooters(self.log.system_log_path)
@@ -684,7 +684,7 @@ class LogFairy():
 		self.writeLogHeaders(self.system_log_path)
 		self.writeLogColumnNames(self.system_log_path)
 
-		self.writeToSystemLog(SystemMessage(self, "INFO", "SYSTEM LOG CREATED"))
+		pyayaBot_threading.WriteLogMessageThread(self, "system", SystemMessage(self, "INFO", "SYSTEM LOG CREATED"))
 
 		## Open the handle to the chat log file, write the headers, top row and log the action to the system log.
 		for log_count in range(100):
@@ -702,7 +702,7 @@ class LogFairy():
 		self.writeLogHeaders(self.chat_log_path)
 		self.writeLogColumnNames(self.chat_log_path)
 
-		self.writeToSystemLog(SystemMessage(self, "INFO", "CHAT LOG CREATED"))
+		pyayaBot_threading.WriteLogMessageThread(self, "system", SystemMessage(self, "INFO", "CHAT LOG CREATED"))
 
 		## Open the handle to the IRC log file, write the headers, top row and log the action to the system log.
 		for log_count in range(100):		
@@ -720,7 +720,7 @@ class LogFairy():
 		self.writeLogHeaders(self.irc_log_path)
 		self.writeLogColumnNames(self.irc_log_path)
 
-		self.writeToSystemLog(SystemMessage(self, "INFO", "IRC LOG CREATED"))
+		pyayaBot_threading.WriteLogMessageThread(self, "system", SystemMessage(self, "INFO", "IRC LOG CREATED"))
 
 		## Open the handle to the admin log file, write the headers, top row and log the action to the system log.
 		for log_count in range(100):		
@@ -738,7 +738,7 @@ class LogFairy():
 		self.writeLogHeaders(self.admin_log_path)
 		self.writeLogColumnNames(self.admin_log_path)
 
-		self.writeToSystemLog(SystemMessage(self, "INFO", "ADMIN LOG CREATED"))
+		pyayaBot_threading.WriteLogMessageThread(self, "system", SystemMessage(self, "INFO", "ADMIN LOG CREATED"))
 
 		## Prints out the attributes of a LogFairy instance.
 	def printLogFairy(self):
@@ -770,7 +770,7 @@ class LogFairy():
 			write_handle.write("		<td align=\"left\">Action</td>\n")
 		else:
 			write_handle.write("      <td align=\"left\">ERROR</td>\n")
-			self.writeToSystemLog(SystemMessage(self, "ERROR", "Invalid log found type while writing top row."))
+			pyayaBot_threading.WriteLogMessageThread(self, "system", SystemMessage(self, "ERROR", "Invalid log found type while writing top row."))
 			sys.exit()
 
 		write_handle.write("		<td align=\"left\">Body</td>\n")
@@ -814,63 +814,36 @@ class LogFairy():
 
 		write_handle.close()
 
-	## writeToAdminLog - Opens, writes an entry to and then closes the chat log file.
-	## m              - A ChatMessage object containing the values to write into the chat log.
-	def writeToAdminLog(self, m):
-		write_handle = open(self.admin_log_path, "a")
-
-		write_handle.write("	<tr>\n")
-		write_handle.write("		<td height=\"17\" align=\"left\">" + m.date + "</td>\n")
-		write_handle.write("		<td align=\"left\">" + m.time + "</td>\n")
-		write_handle.write("		<td align=\"left\">" + m.action + "</td>\n")
-		write_handle.write("		<td align=\"left\">" + m.body + "</td>\n")
-		write_handle.write("	</tr>\n")
-
-		write_handle.close()
-
-	## writeToChatLog - Opens, writes an entry to and then closes the chat log file.
-	## m              - A ChatMessage object containing the values to write into the chat log.
-	def writeToChatLog(self, m):
-		write_handle = open(self.chat_log_path, "a")
-
-		write_handle.write("	<tr>\n")
-		write_handle.write("		<td height=\"17\" align=\"left\">" + m.date + "</td>\n")
-		write_handle.write("		<td align=\"left\">" + m.time + "</td>\n")
-		write_handle.write("		<td align=\"left\">" + m.user + "</td>\n")
-		write_handle.write("		<td align=\"left\">" + m.body + "</td>\n")
-		write_handle.write("	</tr>\n")			
-
-		write_handle.close()
-
-	## writeToIRCLog - Opens, writes an entry to and then closes the IRC log file.
-	## m             - An IRCMessage object containing the values to write into the IRC log.
-	def writeToIRCLog(self, m):
-		write_handle = open(self.irc_log_path, "a")
-
-		write_handle.write("	<tr>\n")
-		write_handle.write("		<td height=\"17\" align=\"left\">" + m.date + "</td>\n")
-		write_handle.write("		<td align=\"left\">" + m.time + "</td>\n")
-		write_handle.write("		<td align=\"left\">" + m.type + "</td>\n")
-		write_handle.write("		<td align=\"left\">" + m.body + "</td>\n")
-		write_handle.write("	</tr>\n")			
-
-		write_handle.close()
-
-	## writeToSystemLog - Opens, writes an entry to and then closes the IRC log file.
-	## m                - A SystemMessage object containing the values to write into the system log.
-	def writeToSystemLog(self, m):
+	## writeLogMessage - Opens, writes an entry to and then closes a log file.
+	## message         - A SystemMessage object containing the values to write into a log file.
+	## log_type        - Which of the 4 (Admin, Chat, IRC, System) log files to which the message should be written.
+	def writeLogMessage(self, log_type, message):
+		## Open the correct file and set the value of the third column based on the log type.
+		if (log_type == "admin"):
+			column_three = message.action
+			write_handle = open(self.admin_log_path, "a")
+		elif (log_type == "chat"):
+			write_handle = open(self.chat_log_path, "a")
+			column_three = message.user
+		elif (log_type == "irc"):
+			column_three = message.type
+			write_handle = open(self.irc_log_path, "a")		
 		## Only write the log entry if it is enabled by the bitlist.
-		if ((self.syslog_bitlist[0] == "1" and m.level == "INFO") or (self.syslog_bitlist[1] == "1" and m.level == "WARNING") or (self.syslog_bitlist[2] == "1" and m.level == "ERROR") or (self.syslog_bitlist[3] == "1" and m.level == "DEBUG")):
+		elif ((log_type == "system") and (self.syslog_bitlist[0] == "1" and message.level == "INFO") or (self.syslog_bitlist[1] == "1" and message.level == "WARNING") or (self.syslog_bitlist[2] == "1" and message.level == "ERROR") or (self.syslog_bitlist[3] == "1" and message.level == "DEBUG")):
+			column_three = message.level
 			write_handle = open(self.system_log_path, "a")
+		else:
+			pyayaBot_threading.WriteLogMessageThread(self, "system", "WARNING", "Invalid log type \"" + log_type + "\" found while writing a message.")
+			return
 
-			write_handle.write("	<tr>\n")
-			write_handle.write("		<td height=\"17\" align=\"left\">" + m.date + "</td>\n")
-			write_handle.write("		<td align=\"left\">" + m.time + "</td>\n")
-			write_handle.write("		<td align=\"left\">" + m.level + "</td>\n")
-			write_handle.write("		<td align=\"left\">" + m.body + "</td>\n")
-			write_handle.write("	</tr>\n")			
+		write_handle.write("	<tr>\n")
+		write_handle.write("		<td height=\"17\" align=\"left\">" + message.date + "</td>\n")
+		write_handle.write("		<td align=\"left\">" + message.time + "</td>\n")
+		write_handle.write("		<td align=\"left\">" + column_three + "</td>\n")
+		write_handle.write("		<td align=\"left\">" + message.body + "</td>\n")
+		write_handle.write("	</tr>\n")			
 
-			write_handle.close()
+		write_handle.close()
 
 ## End of LogFairy class
 

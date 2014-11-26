@@ -3,9 +3,8 @@
 ## This module contains the special thread subclasses used by pyayaBot.
 
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
-## Implement addQLPlayerThread class [ IN-PROGRESS ]
-## Merge the 4 addQLPlayerAndSendQLPlayerXThread classes into one class. [ NOT STARTED ]
-## Merge the 4 writeToXLogThread classes into one class.
+## Merge the 4 addQLPlayerAndSendQLPlayerXThread classes into one class. [ DONE ]
+## Merge the 4 writeToXLogThread classes into one class. [ DONE ]
 
 ## BUG FIXES
 ## 
@@ -17,91 +16,30 @@
 import threading, time
 
 ## Third-party imports
-import pyayaBot_main, pyayaBot_featureSets
+import pyayaBot_main, pyayaBot_basicFeatureSet, pyayaBot_qlranksFeatureSet
 
-## addQLPlayerThreadAndSendQLPlayerLastGame - A thread which initializes a QLPlayer object by parsing a QLRanks webpage and sends the QL player's last game to the chat.
-class addQLPlayerAndSendQLPlayerLastGameThread(threading.Thread):
+## addQLPlayerAndSendQLPlayerInfoThread - A thread which initializes a QLPlayer object by parsing a QLRanks webpage and sends info about that player to the chatroom.
+class AddQLPlayerAndSendQLPlayerInfoThread(threading.Thread):
 	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
 	## self.grand_parent - The pyayaBot_main.Bot instance which spawned this thread.
+	## self.info_type    - The type of player info (lastgame, maps, profile, stats) to send to the chatroom.
 	## self.thread_id    - A unique ID assigned to each thread.
 	## self.player_obj   - The newly created object to pass to the add method.
-	def __init__(self, grand_parent, player_obj):
+	def __init__(self, grand_parent, info_type, player_obj):
 		threading.Thread.__init__(self)
 		self.grand_parent = grand_parent
+		self.info_type    = info_type
 		self.thread_id    = threading.activeCount() + 1
 		self.player_obj   = player_obj
-		
+
 		self.start()
 
-	## run - This method calls the pyayaBot_featureSets.QLRanksFeatureSet.addQLPlayer and pyayaBot_featureSets.QLRanksFeatureSet.sendQLPlayerLastGame methods.
+	## run - This method calls the pyayaBot_qlranksFeatureSet.QLRanksFeatureSet.addQLPlayer and pyayaBot_qlranksFeatureSet.QLRanksFeatureSet.sendQLPlayerInfo methods.
 	def run(self):
 		self.grand_parent.qlranks_feature_set.addQLPlayer(self.player_obj)
-		self.grand_parent.qlranks_feature_set.sendQLPlayerLastGame(self.player_obj)
+		self.grand_parent.qlranks_feature_set.sendQLPlayerInfo(self.info_type, self.player_obj)
 
-## End of AddQLPlayerThreadAndSendQLPlayerLastGameThread class
-
-## AddQLPlayerAndSendQLPlayerMapThread - A thread which initializes a QLPlayer object by parsing a QLRanks webpage and sends the QL player's top 3 most played maps to the chat.
-class AddQLPlayerAndSendQLPlayerMapsThread(threading.Thread):
-	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.grand_parent - The pyayaBot_main.Bot instance which spawned this thread.
-	## self.thread_id    - A unique ID assigned to each thread.
-	## self.player_obj   - The newly created object to pass to the add method.
-	def __init__(self, grand_parent, player_obj):
-		threading.Thread.__init__(self)
-		self.grand_parent = grand_parent
-		self.thread_id    = threading.activeCount() + 1
-		self.player_obj   = player_obj
-		
-		self.start()
-
-	## run - This method calls the pyayaBot_featureSets.QLRanksFeatureSet.addQLPlayer and pyayaBot_featureSets.QLRanksFeatureSet.sendQLPlayerMaps methods.
-	def run(self):
-		self.grand_parent.qlranks_feature_set.addQLPlayer(self.player_obj)
-		self.grand_parent.qlranks_feature_set.sendQLPlayerMaps(self.player_obj)
-
-## End of AddQLPlayerThreadAndSendQLPlayerMapsThread class
-		
-## AddQLPlayerAndSendQLPlayerProfileThread - A thread which initializes a QLPlayer object by parsing a QLRanks webpage and sends the QL player's duel profile URL to the chat.
-class AddQLPlayerAndSendQLPlayerProfileThread(threading.Thread):
-	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.grand_parent - The pyayaBot_main.Bot instance which spawned this thread.
-	## self.thread_id    - A unique ID assigned to each thread.
-	## self.player_obj   - The newly created object to pass to the add method.
-	def __init__(self, grand_parent, player_obj):
-		threading.Thread.__init__(self)
-		self.grand_parent = grand_parent
-		self.thread_id    = threading.activeCount() + 1
-		self.player_obj   = player_obj
-		
-		self.start()
-
-	## run - This method calls the pyayaBot_featureSets.QLRanksFeatureSet.addQLPlayer and pyayaBot_featureSets.QLRanksFeatureSet.sendQLPlayerProfile methods.
-	def run(self):
-		self.grand_parent.qlranks_feature_set.addQLPlayer(self.player_obj)
-		self.grand_parent.qlranks_feature_set.sendQLPlayerProfile(self.player_obj)
-
-## End of AddQLPlayerThreadAndSendQLPlayerProfileThread class
-		
-## AddQLPlayerAndSendQLPlayerStatsThread - A thread which initializes a QLPlayer object by parsing a QLRanks webpage and sends the QL player's vital stats to the chat.
-class AddQLPlayerAndSendQLPlayerStatsThread(threading.Thread):
-	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.grand_parent - The pyayaBot_main.Bot instance which spawned this thread.
-	## self.thread_id    - A unique ID assigned to each thread.
-	## self.player_obj   - The newly created object to pass to the add method.
-	def __init__(self, grand_parent, player_obj):
-		threading.Thread.__init__(self)
-		self.grand_parent = grand_parent
-		self.thread_id    = threading.activeCount() + 1
-		self.player_obj   = player_obj
-		
-		self.start()
-
-	## run - This method calls the pyayaBot_featureSets.QLRanksFeatureSet.addQLPlayer and pyayaBot_featureSets.QLRanksFeatureSet.sendQLPlayerStats methods.
-	def run(self):
-		self.grand_parent.qlranks_feature_set.addQLPlayer(self.player_obj)
-		self.grand_parent.qlranks_feature_set.sendQLPlayerStats(self.player_obj)
-
-## End of AddQLPlayerThreadAndSendQLPlayerStatsThread class
+## End of AddQLPlayerThreadAndSendQLPlayerInfoThread class
 
 ## ExecuteCommandThread - A thread which parses through and executes a command.
 class ExecuteCommandThread(threading.Thread):
@@ -114,7 +52,7 @@ class ExecuteCommandThread(threading.Thread):
 		self.parent    = parent
 		self.thread_id = threading.activeCount() + 1
 		self.command   = command
-		
+
 		self.start()
 
 	## run - This method calls the pyayaBot_featureSets.BasicFeatureSet.executeCommand method.
@@ -134,7 +72,7 @@ class ParseLineFromTwitchThread(threading.Thread):
 		self.parent    = parent
 		self.thread_id = threading.activeCount() + 1
 		self.line      = line
-		
+
 		self.start()
 
 	## run - This method calls the parseLineFromTwitch method.
@@ -156,7 +94,7 @@ class SendMotdThread(threading.Thread):
 		self.thread_id         = threading.activeCount() + 1
 		self.delay             = delay
 		self.bool_motd_enabled = bool_motd_enabled
-		
+
 		self.start()
 
 	## run - This method calls the pyayaBot_featureSets.BasicFeatureSet.sendMotd method.
@@ -182,81 +120,24 @@ class SendMotdThread(threading.Thread):
 
 ## End of the SendMotdThread class.
 
-## WriteToAdminLogThread - A thread which writes an entry to the Admin log file.
-class WriteToAdminLogThread(threading.Thread):
+## WriteLogMessageThread - A thread which writes an entry to the a log file.
+class WriteLogMessageThread(threading.Thread):
 	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.parent    - The pyayaBot_main.Bot instance which spawned this thread.
+	## self.log       - The pyayaBot_main.LogFairy instance which will handle logging.
 	## self.thread_id - A unique ID assigned to each thread.
 	## self.line      - The line of text to be parsed.
-	def __init__(self, parent, message):
+	## self.log_type  - Which of the 4 (Admin, Chat, IRC, System) log files to which the message should be written.
+	def __init__(self, log, log_type, message):
 		threading.Thread.__init__(self)	
-		self.parent    = parent
+		self.log       = log
 		self.thread_id = threading.activeCount() + 1
+		self.log_type  = log_type
 		self.message   = message
 
 		self.start()
 
 	## run - This method calls the pyayaBot_main.LogFairy.writeToAdminLog method.
-	def run(self):
-		self.parent.log.writeToAdminLog(self.message)
+	def run(self):	
+		self.log.writeLogMessage(self.log_type, self.message)
 
-## End of WriteToAdminlogThread class.
-
-## WriteToChatLogThread - A thread which writes an entry to the chat log file.
-class WriteToChatLogThread(threading.Thread):
-	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.parent    - The pyayaBot_main.Bot instance which spawned this thread.
-	## self.thread_id - A unique ID assigned to each thread.
-	## self.line      - The line of text to be parsed.
-	def __init__(self, parent, message):
-		threading.Thread.__init__(self)	
-		self.parent    = parent
-		self.thread_id = threading.activeCount() + 1
-		self.message   = message
-
-		self.start()
-
-	## run - This method calls the pyayaBot_main.LogFairy.writeToChatLog method.
-	def run(self):
-		self.parent.log.writeToChatLog(self.message)
-
-## End of WriteToChatlogThread class.
-
-## WriteToIRClogThread - A thread which writes an entry to the IRC log file.
-class WriteToIRCLogThread(threading.Thread):
-	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.parent    - The pyayaBot_main.Bot instance which spawned this thread.
-	## self.thread_id - A unique ID assigned to each thread.
-	## self.line      - The line of text to be parsed.
-	def __init__(self, parent, message):
-		threading.Thread.__init__(self)	
-		self.parent    = parent
-		self.thread_id = threading.activeCount() + 1
-		self.message   = message
-
-		self.start()
-
-	## run - This method calls the pyayaBot_main.LogFairy.writeToIRCLog method.
-	def run(self):
-		self.parent.log.writeToIRCLog(self.message)
-
-## End of WriteToIRClogThread class.
-
-## WriteToSystemLogThread - A thread which writes an entry to the System log file.
-class WriteToSystemLogThread(threading.Thread):
-	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.parent    - The pyayaBot_main.Bot instance which spawned this thread.
-	## self.thread_id - A unique ID assigned to each thread.
-	## self.line      - The line of text to be parsed.
-	def __init__(self, parent, message):
-		threading.Thread.__init__(self)
-		self.parent    = parent
-		self.thread_id = threading.activeCount() + 1
-		self.message   = message
-		self.start()
-
-	## run - This method calls the pyayaBot_main.LogFairy.writeToSystemLog method.
-	def run(self):
-		self.parent.log.writeToSystemLog(self.message)
-
-## End of WriteToSystemlogThread class.
+## End of WriteLogMessageThread class.
