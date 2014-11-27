@@ -18,47 +18,29 @@ import threading, time
 ## Third-party imports
 import pyayaBot_main, pyayaBot_basicFeatureSet, pyayaBot_qlranksFeatureSet
 
-## addQLPlayerAndSendQLPlayerInfoThread - A thread which initializes a QLPlayer object by parsing a QLRanks webpage and sends info about that player to the chatroom.
-class AddQLPlayerAndSendQLPlayerInfoThread(threading.Thread):
-	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.grand_parent - The pyayaBot_main.Bot instance which spawned this thread.
-	## self.info_type    - The type of player info (lastgame, maps, profile, stats) to send to the chatroom.
-	## self.thread_id    - A unique ID assigned to each thread.
-	## self.player_obj   - The newly created object to pass to the add method.
-	def __init__(self, grand_parent, info_type, player_obj):
-		threading.Thread.__init__(self)
-		self.grand_parent = grand_parent
-		self.info_type    = info_type
-		self.thread_id    = threading.activeCount() + 1
-		self.player_obj   = player_obj
-
-		self.start()
-
-	## run - This method calls the pyayaBot_qlranksFeatureSet.QLRanksFeatureSet.addQLPlayer and pyayaBot_qlranksFeatureSet.QLRanksFeatureSet.sendQLPlayerInfo methods.
-	def run(self):
-		self.grand_parent.qlranks_feature_set.addQLPlayer(self.player_obj)
-		self.grand_parent.qlranks_feature_set.sendQLPlayerInfo(self.info_type, self.player_obj)
-
-## End of AddQLPlayerThreadAndSendQLPlayerInfoThread class
-
 ## ExecuteCommandThread - A thread which parses through and executes a command.
 class ExecuteCommandThread(threading.Thread):
 	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
-	## self.parent    - The pyayaBot_main.Bot instance which spawned this thread.
-	## self.thread_id - A unique ID assigned to each thread.
-	## self.command   - The command to execute as a Command object.
-	def __init__(self, parent, command):
+	## self.parent      - The pyayaBot_main.Bot instance which spawned this thread.
+	## self.feature_set - The feature set whose executeCommand method should be called.
+	## self.thread_id   - A unique ID assigned to each thread.
+	## self.command     - The command to execute as a Command object.
+	def __init__(self, parent, feature_set, command):
 		threading.Thread.__init__(self)
-		self.parent    = parent
-		self.thread_id = threading.activeCount() + 1
-		self.command   = command
+		self.parent      = parent
+		self.feature_set = feature_set
+		self.thread_id   = threading.activeCount() + 1
+		self.command     = command
 
 		self.start()
 
-	## run - This method calls the pyayaBot_featureSets.BasicFeatureSet.executeCommand method.
+	## run - This method calls the executeCommand method of the specified feature set.
 	def run(self):
-		self.parent.basic_feature_set.executeCommand(self.command)
-
+		if (self.feature_set == "basic"):
+			self.parent.basic_feature_set.executeCommand(self.command)
+		elif (self.feature_set == "qlranks"):
+			self.parent.qlranks_feature_set.executeCommand(self.command)
+	
 ## End of ExecuteCommandThread class.	
 
 ## ParseLineFromTwitchThread - A thread which parses through a line of text from the twitch.tv IRC server.
@@ -119,6 +101,28 @@ class SendMotdThread(threading.Thread):
 		self.bool_motd_enabled = bool
 
 ## End of the SendMotdThread class.
+
+## SendQLPlayerInfoThread - A thread which initializes a QLPlayer object by parsing a QLRanks webpage and sends info about that player to the chatroom.
+class SendQLPlayerInfoThread(threading.Thread):
+	## __init__ - Initializes the attributes of the parseLineFromTwitchThread instance.
+	## self.grand_parent - The pyayaBot_main.Bot instance which spawned this thread.
+	## self.info_type    - The type of player info (lastgame, maps, profile, stats) to send to the chatroom.
+	## self.thread_id    - A unique ID assigned to each thread.
+	## self.player_obj   - The newly created object to pass to the add method.
+	def __init__(self, grand_parent, info_type, player_obj):
+		threading.Thread.__init__(self)
+		self.grand_parent = grand_parent
+		self.info_type    = info_type
+		self.thread_id    = threading.activeCount() + 1
+		self.player_obj   = player_obj
+
+		self.start()
+
+	## run - This method calls the pyayaBot_qlranksFeatureSet.QLRanksFeatureSet.sendQLPlayerInfo method.
+	def run(self):
+		self.grand_parent.qlranks_feature_set.sendQLPlayerInfo(self.info_type, self.player_obj)
+
+## End of SendQLPlayerInfoThread class
 
 ## WriteLogMessageThread - A thread which writes an entry to the a log file.
 class WriteLogMessageThread(threading.Thread):

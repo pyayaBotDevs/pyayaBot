@@ -49,14 +49,14 @@ class Bot():
 	## channel_config_path          - The absolute or relative path to the channel configuration file to initialize the Bot instance.
 	## syslog_bitlist               - The list of binary values controlling which system logging types are enabled.
 	def __init__(self, connection_config_path, channel_config_path, syslog_bitlist):
-		print "                                ____        _     ____       _"   
+		print "                                ____        _     ____       _"
 		print "                               |  _ \      | |   |  _ \     | |"
 		print "  _ __  _   _  __ _ _   _  __ _| |_) | ___ | |_  | |_) | ___| |_ __ _"
 		print " | '_ \| | | |/ _` | | | |/ _` |  _ < / _ \| __| |  _ < / _ \ __/ _` |"
 		print " | |_) | |_| | (_| | |_| | (_| | |_) | (_) | |__ | |_) |  __/ |_| (_||"
 		print " | .__/ \__, |\__,_|\__, |\__,_|____/ \___/ \__| |____/ \___|\__\__,_|"
 		print " | |     __/ |       __/ |"
-		print " |_|    |___/       |___/"       
+		print " |_|    |___/       |___/"
 
 		print "\nInitializing Bot instance."
 
@@ -182,19 +182,6 @@ class Bot():
 			if (self.getIfKnownUser(name) == 0):
 				self.addUser(User(self, name))	
 
-	## getIfKnownUser - This method will loop through the list of User objects.
-	##                  It returns 0 if the user is not tracked in the list of users.
-	##                  It returns 1 if the user is tracked in the list of users.
-	## n              - The username of someone in the channel to check.
-	def getIfKnownUser(self, n):
-		bool_known = 0
-		for user in self.list_of_users:
-			if (n == user.name):
-				bool_known = 1
-				break
-
-		return bool_known
-
 	## connectToTwitch - This method connects to the twitch IRC server and joins the configured channel.
 	def connectToTwitch(self):
 		## Open the connection to twitch IRC and join the channel specified in the configuration file.
@@ -213,6 +200,19 @@ class Bot():
 
 		pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "INFO", "Successfully connected to twitch.tv IRC server. (" + self.host + " Port " + str(self.port) + ")"))
 
+	## getIfKnownUser - This method will loop through the list of User objects.
+	##                  It returns 0 if the user is not tracked in the list of users.
+	##                  It returns 1 if the user is tracked in the list of users.
+	## n              - The username of someone in the channel to check.
+	def getIfKnownUser(self, n):
+		bool_known = 0
+		for user in self.list_of_users:
+			if (n == user.name):
+				bool_known = 1
+				break
+
+		return bool_known		
+	
 	## initializeFeatureSets - This method initializes feature set objects.
 	def initializeFeatureSets(self):
 		## Initialize booleans to enable or disable feature sets.
@@ -281,6 +281,7 @@ class Bot():
 		for key, value in config_json.iteritems():
 			if (key == "channel"):
 				self.channel = value
+
 			elif (key == "feature_sets"):
 				## Parse through each JSON object contained in the feature_sets list.
 				for fs in config_json["feature_sets"]:
@@ -408,9 +409,12 @@ class Bot():
 					self.addUser(User(self, user))
 
 				## Parse the chat message from the user to determine if a command was issued.
-				if (self.bool_basic_feature_set == 1):
-					if (self.basic_feature_set.checkIfCommand(body)):
-						pyayaBot_threading.ExecuteCommandThread(self, pyayaBot_basicFeatureSet.Command(user, body)).join()
+				if (self.basic_feature_set.checkIfCommand(body) and self.basic_feature_set.checkIfEnabled()):
+					pyayaBot_threading.ExecuteCommandThread(self, "basic", pyayaBot_basicFeatureSet.Command(user, body)).join()
+			
+				if (self.qlranks_feature_set.checkIfCommand(body) and self.qlranks_feature_set.checkIfEnabled()):
+					pyayaBot_threading.ExecuteCommandThread(self, "qlranks", pyayaBot_basicFeatureSet.Command(user, body)).join()
+		
 			else:
 				pyayaBot_threading.WriteLogMessageThread(self.log, "system", SystemMessage(self.log, "WARNING", "Unknown message type received from twitch.tv IRC server: \"" + line_parts[1] + "\". Ignoring.")).join()
 		else:

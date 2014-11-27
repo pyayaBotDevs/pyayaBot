@@ -42,7 +42,14 @@ class BasicFeatureSet():
 	## parseLineFromChat - This method parses through a line of chat (A single chat message) to see if it contains a command.
 	## t                 - The line of text to parse.
 	def checkIfCommand(self, t):
-		if (re.match("^[!@$].+$", t)):
+		if (re.match("^[!@$].+$", t) and self.parent.bool_basic_feature_set == 1):
+			return 1
+		else:
+			return 0
+
+	## checkIfEnabled - This method checks whether or not the feature set is enabled.           
+	def checkIfEnabled(self):
+		if (self.parent.bool_basic_feature_set == 1):
 			return 1
 		else:
 			return 0
@@ -50,7 +57,7 @@ class BasicFeatureSet():
 	## executeCommand - This method executes a command typed by a user.
 	## This method will contain logic to handle basic commands.
 	## c              - The command to execute as a Command object.
-	def executeCommand(self, c):
+	def executeCommand(self, c):		
 		bool_valid_command = 1
 
 		## Look up the User object associated with the username who sent the command.
@@ -68,7 +75,8 @@ class BasicFeatureSet():
 					if (re.match("^save", c.name.lower())):
 						## SAVE CHANNEL CONFIG - This command saves the current channel configuration.
 						if (re.match("^save\s+channel\s+config$", c.name.lower())):
-							self.saveChannelConfig(c)
+							self.saveFeatureSetConfig(c)
+							self.parent.qlranks_feature_set.saveFeatureSetConfig(c)
 
 					## SET Commands - These commands alter live configuration settings.
 					elif (re.match("^set", c.name.lower())):
@@ -97,14 +105,13 @@ class BasicFeatureSet():
 							self.toggleMotd(c)
 
 					## YO Command - Simple example of bot responding to user input. Meant for debug purposes.
-					elif (re.match("yo", c.name.lower())):
+					elif (re.match("^yo$", c.name.lower())):
 						self.parent.sendChatMessage("Adrian!")
 						pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level YO command issued by " + c.user)).join()
 
 				## USER-level commands - No User verification required.
 				## Update the user's timer for flood protection.
 				elif ((c.level == "USER") and (time.time() - user.last_command_time > self.global_cooldown) and (time.time() - user.last_command_time > self.user_cooldown)):
-					## BasicFeatureSet commands - No prefix.
 					## BUG COMMAND - Sends the bug report URL to the chat.
 					if (re.match("^bug$", c.name.lower())):
 						self.parent.sendChatMessage("Bugs and feature requests can be submitted here: https://github.com/pyayaBotDevs/pyayaBot/issues/new")
@@ -116,28 +123,6 @@ class BasicFeatureSet():
 					## MOTD COMMAND - Sends the MOTD to the chat.
 					elif (re.match("^motd$", c.name.lower())):
 						self.sendMotd()
-
-					## QLRanksFeatureSet commands - qrl prefix.
-					## QLRANK COMMANDS - These commands offer functionality from QLRanks.com
-					elif ((re.match("^qlranks", c.name.lower())) and (self.parent.bool_qlranks_feature_set == 1)):
-						## QLRANK LASTGAME COMMAND - Sends info about a player's last played game to the chat.
-						if (re.match("^qlranks\s+lastgame\s+[a-zA-Z_]+", c.name.lower())):
-							pyayaBot_threading.AddQLPlayerAndSendQLPlayerInfoThread(self.parent, "lastgame", pyayaBot_qlranksFeatureSet.QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
-
-						## QLRANK MAPS COMMAND	- Sends a player's 3 most played maps to the chat.
-						elif (re.match("^qlranks\s+maps\s+[a-zA-Z0-9_]+", c.name.lower())):
-							pyayaBot_threading.AddQLPlayerAndSendQLPlayerInfoThread(self.parent, "maps", pyayaBot_qlranksFeatureSet.QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
-				
-						## QLRANK PROFILE COMMAND - Sends the URL to a player's QLRanks profile to the chat.
-						elif (re.match("^qlranks\s+profile\s+[a-zA-Z0-9_]+", c.name.lower())):
-							pyayaBot_threading.AddQLPlayerAndSendQLPlayerInfoThread(self.parent, "profile", pyayaBot_qlranksFeatureSet.QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
-						
-						## QRL STATS COMMAND - Sends a player's vitial stats to the chat.
-						elif (re.match("^qlranks\s+stats\s+[a-zA-Z0-9_]+", c.name.lower())):
-							pyayaBot_threading.AddQLPlayerAndSendQLPlayerInfoThread(self.parent, "stats", pyayaBot_qlranksFeatureSet.QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
-
-						else:
-							bool_valid_command = 0
 			
 					else:
 						bool_valid_command = 0	
@@ -166,9 +151,9 @@ class BasicFeatureSet():
 		print "        self.global_cooldown: " + str(self.global_cooldown)
 		print "        self.user_cooldown: " + str(self.user_cooldown)
 		
-	## saveChannelConfig - This method saves the current channel settings to the config file.
-	## c                 - The command object containing the user and new MOTD text.
-	def saveChannelConfig(self, c):
+	## saveFeatureSetConfig - This method saves the current channel settings to the config file.
+	## c                    - The command object containing the user and new MOTD text.
+	def saveFeatureSetConfig(self, c):
 		pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level SAVE CHANNEL CONFIG command issued by " + c.user + ".")).join()
 
 		try:
@@ -207,13 +192,13 @@ class BasicFeatureSet():
 					elif (key == "user_cooldown"):
 						fs["user_cooldown"] = self.user_cooldown
 					else:
-						pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "WARNING", "Invalid configuration key \"" + key + "\" detected. Ignoring...")).join()
+						pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "WARNING", "Invalid BasicFeatureSet configuration key \"" + key + "\" detected. Ignoring...")).join()
 
 		json.dump(config_json, config_path, indent=4)
-		
-		self.parent.sendChatMessage("Successfully saved the configuration.")
-		pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "INFO", "Successfully saved the configuration.")).join()
-		
+
+		self.parent.sendChatMessage("Successfully saved the Basic Feature Set configuration.")
+		pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "INFO", "Successfully saved the BasicFeatureSet configuration.")).join()
+
 	## sendMotd - Sends the message of the day to chat.
 	def sendMotd(self):
 		self.parent.sendChatMessage(self.getMotd())
