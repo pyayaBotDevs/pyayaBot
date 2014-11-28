@@ -3,7 +3,7 @@
 ## This module contains all of the interactive features of the QLRanks Feature Set.
 
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
-## Add support to store information about a player in all gametypes.
+## 
 
 ## BACKLOG [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
 ##
@@ -24,11 +24,15 @@ class QLRanksFeatureSet():
 	## __init__ - This method initializes the command instance.
 	## self.parent        - A handle to the parent Bot object.
 	## self.best_of_count - The number of games in a match.
+	## self.gametype      - The gametype to use when looking up QL player stats.
+	## self.max_maps      - The maximum number of maps to send with the topmaps command.
 	##
-	## fs                     - The QLRanksFeatureSet dictionary containing the settings.
+	## fs                 - The QLRanksFeatureSet dictionary containing the settings.
 	def __init__(self, parent, fs):
-		self.parent            = parent
-		self.best_of_count     = fs["best_of_count"]
+		self.parent        = parent
+		self.best_of_count = fs["best_of_count"]
+		self.gametype      = fs["gametype"]
+		self.max_maps      = fs["max_maps"]
 
 	## addQLPlayer - This method adds a QLPlayer object to the list of QL players.
 	## p           - The QLPlayer object to add to the list.
@@ -78,29 +82,38 @@ class QLRanksFeatureSet():
 
 				## MOD-level commands - Verify that the User is an op.
 				elif (c.level == "OP" and (user.bool_isop == 1 or user.bool_isadmin == 1)):
-					if (re.match("^qlranks\s+set\s+match\s+bo[13579]+$", c.name.lower())):
-						self.setMatchBestOf(c)
-						
+					## QLRANKS SET GAMETYPE COMMAND - Sets the gametype to use when performing QL player lookups.
+					if (re.match("^qlranks\s+set\s+gametype\s+(duel|ca|tdm|ctf|ffa)$", c.name.lower())):
+						self.setGametype(c)
+
+					## QLRANKS SET MATCH BO# COMMAND - Sets the best of counter.
+					elif (re.match("^qlranks\s+set\s+match\s+bo[13579]+$", c.name.lower())):
+						self.setBestOfCount(c)						
+
+					## QLRANKS SET MAXMAPS COMMAND - Sets the max maps to send to chat with the topmaps command.
+					elif (re.match("^qlranks\s+set\s+maxmaps\s+[0-9]$", c.name.lower())):
+						self.setMaxMaps(c)
+
 				## USER-level commands - No User verification required.
 				## Update the user's timer for flood protection.
 				elif ((c.level == "USER") and (time.time() - user.last_command_time > self.parent.basic_feature_set.global_cooldown) and (time.time() - user.last_command_time > self.parent.basic_feature_set.user_cooldown)):
-					## QLRANK LASTGAME COMMAND - Sends info about a player's last played game to the chat.
+					## QLRANKS LASTGAME COMMAND - Sends info about a player's last played game to the chat.
 					if (re.match("^qlranks\s+lastgame\s+[a-zA-Z0-9_]+$", c.name.lower())):
 						pyayaBot_threading.SendQLPlayerInfoThread(self.parent, "lastgame", QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 
-					## QLRANK LASTMATCH COMMAND - Sends info about a player's last played match to the chat.
+					## QLRANKS LASTMATCH COMMAND - Sends info about a player's last played match to the chat.
 					elif (re.match("^qlranks\s+lastmatch\s+[a-zA-Z0-9_]+\s+[a-zA-Z0-9_]+$", c.name.lower())):
 						pyayaBot_threading.SendQLPlayerInfoThread(self.parent, "lastmatch", QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
-
-					## QLRANK MAPS COMMAND	- Sends a player's 3 most played maps to the chat.
-					elif (re.match("^qlranks\s+maps\s+[a-zA-Z0-9_]+$", c.name.lower())):
-						pyayaBot_threading.SendQLPlayerInfoThread(self.parent, "maps", QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 				
-					## QLRANK PROFILE COMMAND - Sends the URL to a player's QLRanks profile to the chat.
+					## QLRANKS PROFILE COMMAND - Sends the URL to a player's QLRanks profile to the chat.
 					elif (re.match("^qlranks\s+profile\s+[a-zA-Z0-9_]+$", c.name.lower())):
-						pyayaBot_threading.QLPlayerInfoThread(self.parent, "profile", QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
+						pyayaBot_threading.SendQLPlayerInfoThread(self.parent, "profile", QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
+
+					## QLRANKS MAPS COMMAND	- Sends a player's 3 most played maps to the chat.
+					elif (re.match("^qlranks\s+topmaps\s+[a-zA-Z0-9_]+$", c.name.lower())):
+						pyayaBot_threading.SendQLPlayerInfoThread(self.parent, "topmaps", QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 					
-					## QRL STATS COMMAND - Sends a player's vitial stats to the chat.
+					## QLRANKS STATS COMMAND - Sends a player's vitial stats to the chat.
 					elif (re.match("^qlranks\s+stats\s+[a-zA-Z0-9_]+$", c.name.lower())):
 						pyayaBot_threading.SendQLPlayerInfoThread(self.parent, "stats", QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 
@@ -126,8 +139,6 @@ class QLRanksFeatureSet():
 
 		else:
 			## This should never execute but is here as a fail-safe. The regex matching in BasicFeatureSet.executeCommand should prevent this from being hit.
-			self.parent.sendChatMessage("Invalid QLRANK command: Syntax: !qlrank (stats|maps|lastgame|lastmatch) [Player]") 
-			self.parent.sendChatMessage("Player must be a QL player's name.")
 			sys.exit()
 
 		return player_name
@@ -144,9 +155,6 @@ class QLRanksFeatureSet():
 			player_name = command_list[2]
 
 		else:
-			## This should never execute but is here as a fail-safe. The regex matching in BasicFeatureSet.executeCommand should prevent this from being hit.
-			self.parent.sendChatMessage("Invalid QLRANK command: Syntax: !qrl (stats|maps|lastgame) [Player]") 
-			self.parent.sendChatMessage("Player must be a QL player's name.")
 			sys.exit()
 
 		for player in self.list_of_qlplayers:
@@ -162,27 +170,27 @@ class QLRanksFeatureSet():
 			player_name    = command_list[2]
 			opponent_name  = ""
 
-			## Give the chat feedback so they know it is wokring.
-			self.parent.sendChatMessage("I am looking up \"" + player_name + "\" now...") 
+			## Give the chat feedback so they know it is working.
+			#self.parent.sendChatMessage("I am looking up \"" + player_name + "\" now...") 
 
-			player_profile = "http://www.qlranks.com/duel/player/" + player_name
+			player_profile = "http://www.qlranks.com/" + self.gametype + "/player/" + player_name
 			soup           = BeautifulSoup(urllib2.urlopen(player_profile).read())
 
 		## lastmatch takes 2 names.
 		elif (len(command_list) == 4):
-			player_name    = command_list[2]
-			opponent_name  = command_list[3]
+			if (self.gametype == "duel"):
+				player_name    = command_list[2]
+				opponent_name  = command_list[3]
 
-			## Give the chat feedback so they know it is wokring.
-			self.parent.sendChatMessage("I am looking up \"" + player_name + "\" now...") 
+				## Give the chat feedback so they know it is wokring.
+				#self.parent.sendChatMessage("I am looking up \"" + player_name + "\" now...") 
 
-			player_profile = "http://www.qlranks.com/duel/player/" + player_name		
-			soup           = BeautifulSoup(urllib2.urlopen(player_profile).read())
-
+				player_profile = "http://www.qlranks.com/" + self.gametype + "/player/" + player_name		
+				soup           = BeautifulSoup(urllib2.urlopen(player_profile).read())
+			else:
+				self.parent.sendChatMessage("The lastmatch command is only available for the duel gametype.") 
+				sys.exit()
 		else:
-			## This should never execute but is here as a fail-safe. The regex matching in BasicFeatureSet.executeCommand should prevent this from being hit.
-			self.parent.sendChatMessage("Invalid QLRANK command: Syntax: !qrl (stats|maps|lastgame) [Player]") 
-			self.parent.sendChatMessage("Player must be a QL player's name.")
 			sys.exit()
 
 		return player_name, opponent_name, player_profile, soup
@@ -197,68 +205,146 @@ class QLRanksFeatureSet():
 
 		## The player does not exist. Send an error to chat and exit the current thread.
 		if (str(soup.title).find(player_name) == -1):
-			self.parent.sendChatMessage("No player with name " + player_name + " was found on QLRanks.") 
+			if (self.gametype == "duel"):
+				self.parent.sendChatMessage("No " + self.gametype + " stats for \"" + player_name + "\" were found on QLRanks.") 			
+			else:
+				self.parent.sendChatMessage("No " + self.gametype.upper() + " stats for \"" + player_name + "\" were found on QLRanks.") 
 			sys.exit()
 
-		## Get the vital stats from the stats div and format it nicely for chat.
-		player_stats_string = re.sub("(TS %: [0-9]+| \([0-9]+\)| Ladder: [a-zA-Z]+)", "", soup.select("div #stats")[0].get_text().replace("World Rank", "WR").replace("Elo:", "| Elo:").replace("Duels Tracked:", "| Duels:").replace("Win %:", "| Win %:"))
+		if (self.gametype == "duel"):
+			## Get the vital stats from the stats div and format it nicely for chat.		
+			player_stats_string = re.sub("\s+", " ", re.sub("(TS %:\s*[0-9]+|\s*\([0-9]+\)|\s*Ladder:\s*[a-zA-Z]+|\s*Clan:\s*.+)", "", soup.select("div #stats")[0].get_text().replace("World Rank", "WR").replace("Elo:", "| Duel Elo:").replace("Duels Tracked:", "| Duels:").replace("Win %:", "| Win %:"))).strip()
+		elif (self.gametype == "ca"):
+			player_stats_string = re.sub("\s+", " ", re.sub("(TS %:\s*[0-9]+|\s*\([0-9]+\)|\s*Ladder:\s*[a-zA-Z]+|\s*Clan:\s*.+)", "", soup.select("div #stats")[0].get_text().replace("World Rank", "WR").replace("CA Elo:", "| Elo:").replace("CA's Tracked:", "| CA's:").replace("Win %:", "| Win %:"))).strip()
+		elif (self.gametype == "ctf"):
+			player_stats_string = re.sub("\s+", " ", re.sub("(TS %:\s*[0-9]+|\s*\([0-9]+\)|\s*Ladder:\s*[a-zA-Z]+|\s*Clan:\s*.+)", "", soup.select("div #stats")[0].get_text().replace("World Rank", "WR").replace("CTF Elo:", "| Elo:").replace("CTF's Tracked:", "| CTF's:").replace("Win %:", "| Win %:"))).strip()
+		elif (self.gametype == "tdm"):
+			player_stats_string = re.sub("\s+", " ", re.sub("(TS %:\s*[0-9]+|\s*\([0-9]+\)|\s*Ladder:\s*[a-zA-Z]+|\s*Clan:\s*.+)", "", soup.select("div #stats")[0].get_text().replace("World Rank", "WR").replace("TDM Elo:", "| Elo:").replace("TDMs Tracked:", "| TDM's:").replace("Win %:", "| Win %:"))).strip()
+		elif (self.gametype == "ffa"):
+			player_stats_string = re.sub("\s+", " ", re.sub("(TS %:\s*[0-9]+|\s*\([0-9]+\)|\s*Ladder:\s*[a-zA-Z]+|\s*Clan:\s*.+)", "", soup.select("div #stats")[0].get_text().replace("World Rank", "WR").replace("FFA Rating:", "| Rating:").replace("FFA's Tracked:", "| FFA's:").replace("Win %:", "| Win %:"))).strip()
+		else:
+			pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "INFO", "Invalid gametype \"" + self.gametype + "\" specified. Ignoring...")).join()		
+			sys.exit()
 
+		## Cherry pick the match count for calculations later.
+		match_count = int(player_stats_string.split(" | ")[2].split(":")[1].strip())
+				
 		## Get the top 3 maps played from the inline JS.
 		maps_string  = ""
-		map_counter  = 0
 		player_maps  = re.findall("({label: \"[a-zA-Z0-9_ ]+\", data: [0-9]+\})", str(soup.select("body form div script")))
+		map_counter  = 0
 
 		for map in player_maps:
+			if (map_counter == self.max_maps):
+				break
+
 			map         = map.replace("label", "\"label\"").replace("data", "\"data\"")
 			map_json    = json.loads(map)
-			maps_string = maps_string + map_json["label"] + " (" + str(map_json["data"]) + ") " 
-
-			if (map_counter == 2):
-				break
+			maps_string = maps_string + map_json["label"] + " (" + str(int((float(map_json["data"]) / float(match_count)) * 100)) + "%) " 
 
 			map_counter += 1		
 
-		player_games             = soup.select("table#ctl00_ContentPlaceHolder1_gridPlayerGames tr td")
+		games_added = 0
+		bool_done   = 0
+
+		if (self.gametype == "duel"):
+			player_games         = soup.select("table#ctl00_ContentPlaceHolder1_gridPlayerGames tr td")
+		elif (self.gametype == "ca"):
+				player_games     = soup.select("table#ctl00_ContentPlaceHolder1_gridPlayerCAGames tr td")
+		elif (self.gametype == "tdm"):
+				player_games     = soup.select("table#ctl00_ContentPlaceHolder1_gridPlayerTDMGames tr td")
+		elif (self.gametype == "ctf"):
+				player_games     = soup.select("table#ctl00_ContentPlaceHolder1_gridPlayerCTFGames tr td")
+		elif (self.gametype == "ffa"):
+				player_games     = soup.select("table#ctl00_ContentPlaceHolder1_gridPlayerFFAGames tr td")
+
 		player_current_game      = []
 		last_match_string        = ""
 		last_game_string         = ""
 		current_game_string_list = []
 
-		for w in range(self.best_of_count):
+		if (self.gametype == "duel"):
+			number_of_columns = 8
+		elif (self.gametype == "ffa"):
+			number_of_columns = 5
+		else:
+			number_of_columns = 6
+
+		## Loop through the last 10 games played.
+		for w in range(10):
+			## Break out of outer loop.
+			if (bool_done == 1):
+				break
+
 			player_current_game = []	
-			for x in range(8):
-				game_text = player_games[(w * 8) + x].get_text()
-				if (re.match("^[a-zA-Z0-9_]+ [0-9]+$", game_text) or re.match("^-?[0-9]+$", game_text)):
+			for x in range(number_of_columns):
+				try:
+					game_text = player_games[(w * 8) + x].get_text()
+				
+				except IndexError:
+					bool_done = 1
+					break
+					
+				if (re.match("^[a-zA-Z0-9_]+ [0-9]+$", game_text) or re.match("^-?[0-9]+\*?$", game_text)):
 					player_current_game.append(re.split("\s+", str(game_text))[0])
 					continue
 
 				if (re.match(".*[a-zA-Z0-9_.]+\.jpg.*", str(player_games[(w * 8) + x]))):
 					player_current_game.append(re.sub("_[vV0-9_.]+\.jpg", "", re.findall("[a-zA-Z0-9_.]+\.jpg", str(player_games[(w * 8) + x]))[0]))
 
-			if (len(player_current_game) < 5):
-				continue
+			if (self.gametype == "duel"):
+				if (len(player_current_game) < 5):
+					continue
 
-			player_current_game[0] = player_current_game[0] + " "
-			player_current_game[1] = player_current_game[1] + " - "
-			player_current_game[2] = player_current_game[2] + " "
-			player_current_game[3] = player_current_game[3] + " "
-			player_current_game[4] = player_current_game[4] + ": "
+				player_current_game[0] = player_current_game[0] + " "
+				player_current_game[1] = player_current_game[1] + " - "
+				player_current_game[2] = player_current_game[2] + " "
+				player_current_game[3] = player_current_game[3] + " "
+				player_current_game[4] = player_current_game[4].title() + ": "
 
-			current_game_string = player_current_game[4] + player_current_game[0] + player_current_game[1] + player_current_game[2] + player_current_game[3] + "| "
+				current_game_string = player_current_game[4] + player_current_game[0] + player_current_game[1] + player_current_game[2] + player_current_game[3] + "| "
 			
+			elif (self.gametype == "ffa"):
+				if (len(player_current_game) < 2):
+					continue
+					
+				if (player_current_game[0] == "1"):
+					player_current_game[0] = player_current_game[0] + "st "
+				elif (player_current_game[0] == "2"):
+					player_current_game[0] = player_current_game[0] + "nd "
+				elif (player_current_game[0] == "3"):
+					player_current_game[0] = player_current_game[0] + "rd "
+				else:
+					player_current_game[0] = player_current_game[0] + "th "
+				player_current_game[1] = player_current_game[1].title() + ": "
+					
+				current_game_string = player_current_game[1] + player_current_game[0] + "| "
+
+			else:
+				if (len(player_current_game) < 3):
+					continue
+					
+				player_current_game[0] = "Red " + player_current_game[0] + " - "
+				player_current_game[1] = player_current_game[1] + " Blue "
+				player_current_game[2] = player_current_game[2].title() + ": "
+					
+				current_game_string = player_current_game[2] + player_current_game[0] + player_current_game[1] + "| "
+					
+			## Grab the last game played.
 			if (w == 0):
 				last_game_string = current_game_string
 
-			## The opponent has changed. Stop counting matches.
-			if (current_game_string.lower().find(opponent_name.lower()) == -1 and opponent_name != "" and len(last_match_string) > 0):
-				print "derp"
+			## The opponent has changed or the best of counter has been hit. Stop counting matches. (Break out of inner loop.)
+			if ((current_game_string.lower().find(opponent_name.lower()) == -1) and (opponent_name != "") and (len(last_match_string) > 0) or (games_added >= self.best_of_count)):
+				bool_done = 1
 				break
 			
-			if (current_game_string.lower().find(opponent_name.lower()) != -1):
-				current_game_string_list.append(current_game_string)
+			elif (current_game_string.lower().find(opponent_name.lower()) != -1):
+				last_match_string = last_match_string + current_game_string
+				games_added += 1
 
-		for game in current_game_string_list:
-			last_match_string = last_match_string + game
+		if (last_match_string == ""):
+			last_match_string = "No recent match for " + player_name + " vs. " + opponent_name + ". | "
 		
 		## Seed the QLPlayer instance. Remove the extra | from the end of the last game and match strings.
 		return player_name, last_game_string[:-3], last_match_string[:-3], maps_string, player_profile, player_stats_string
@@ -306,7 +392,11 @@ class QLRanksFeatureSet():
 			if (fs["name"] == "QLRanksFeatureSet"):
 				for key, value in fs.iteritems():				
 					if (key == "best_of_count"):
-						fs["best_of_count"] = self.parent.qlranks_feature_set.best_of_count
+						fs["best_of_count"] = self.best_of_count
+					elif (key == "gametype"):
+						fs["gametype"] = self.gametype
+					elif (key == "max_maps"):
+						fs["max_maps"] = self.max_maps
 					else:
 						pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "WARNING", "Invalid QLRanksFeatureSet configuration key \"" + key + "\" detected. Ignoring...")).join()
 
@@ -323,8 +413,8 @@ class QLRanksFeatureSet():
 			self.parent.sendChatMessage(player.last_game)
 		elif (info_type == "lastmatch"):
 			self.parent.sendChatMessage(player.last_match)		
-		elif (info_type == "maps"):
-			self.parent.sendChatMessage(player.maps)
+		elif (info_type == "topmaps"):
+			self.parent.sendChatMessage(player.top_maps)
 		elif (info_type == "profile"):
 			self.parent.sendChatMessage(player.profile)
 		elif (info_type == "stats"):		
@@ -332,9 +422,35 @@ class QLRanksFeatureSet():
 		else:
 			pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "WARNING", "Invalid info type \"" + info_type + "\" detected. Ignoring...")).join()
 
-	## setMatchBestOf - This method sets the number of games within a match.
-	## command_text    - The command text containing name of the player to lookup.
-	def setMatchBestOf(self, c):
+	## setGametype - This method will set the gametype for QL player lookups.
+	## c           - The command object containing the user and new gametype.
+	def setGametype(self, c):
+		new_value = re.split("\s+", c.name, 3)[3]
+		
+		if (new_value == "ca" or new_value == "ctf" or new_value == "duel" or new_value == "ffa" or new_value == "tdm"):
+			self.gametype = new_value
+			self.parent.sendChatMessage("Gametype updated successfully!")
+			pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level QLRANKS SET GAMETYPE command issued by " + c.user + ". New value: " + self.gametype + ".")).join()
+		else:
+			self.parent.sendChatMessage("Invalid QLRANKS SET GAMETYPE command. Syntax: @qlranks set gametype [Type]")
+			self.parent.sendChatMessage("Type must be 'ca', 'ctf', 'duel', 'ffa' or 'tdm'")
+
+	## setMaxMaps - This method will set the gametype for QL player lookups.
+	## c          - The command object containing the user and new gametype.
+	def setMaxMaps(self, c):
+		new_value = int(re.split("\s+", c.name, 3)[3])
+		
+		if (new_value > 0 and new_value < 6):
+			self.max_maps = new_value
+			self.parent.sendChatMessage("Max maps updated successfully!")
+			pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "INFO", "OP-level QLRANKS SET MAXMAPS command issued by " + c.user + ". New value: " + str(self.max_maps) + ".")).join()
+		else:
+			self.parent.sendChatMessage("Invalid QLRANKS SET MAXMAPS command. Syntax: @qlranks set maxmaps [Number]")
+			self.parent.sendChatMessage("Number must be between 1 and 5.")
+
+	## setBestOfCount - This method sets the number of games within a match.
+	## c              - The command object containing the user and new best of count.
+	def setBestOfCount(self, c):
 		new_value = int(re.split("\s+", c.name, 3)[3][2:])
 		
 		if (new_value > 0 and new_value < 11):
@@ -353,7 +469,7 @@ class QLPlayer():
 	## self.name       - The username of the QL player.
 	## self.last_game  - The most recent game played by the player.
 	## self.last_match - The last match played by the player. Limited by the best of counter and a change of opponent.
-	## self.maps       - The 3 top played maps by the player across all game types.
+	## self.topmaps    - The 1-5 top played maps by the player across all game types.
 	## self.profile    - The URL of the player's duel profile.
 	## self.stats      - Vital stats about the player across all game types. Holds strings for each game type.
 	##
@@ -362,7 +478,7 @@ class QLPlayer():
 		self.name        = player_info[0]
 		self.last_game   = player_info[1]
 		self.last_match  = player_info[2]
-		self.maps        = player_info[3]
+		self.top_maps    = player_info[3]
 		self.profile     = player_info[4]
 		self.stats       = player_info[5]
 
@@ -374,7 +490,7 @@ class QLPlayer():
 		print "        self.name: " + self.name
 		print "        self.last_game: " + self.last_game
 		print "        self.last_match: " + self.last_match
-		print "        self.maps: " + self.maps
+		print "        self.top_maps: " + self.top_maps
 		print "        self.profile: " + self.profile
 		print "        self.stats: " + self.stats
 
@@ -384,7 +500,7 @@ class QLPlayer():
 		self.name        = player_info[0]
 		self.last_game   = player_info[1]
 		self.last_match  = player_info[2]
-		self.maps        = player_info[3]
+		self.top_maps    = player_info[3]
 		self.profile     = player_info[4]
 		self.stats       = player_info[5]		
 

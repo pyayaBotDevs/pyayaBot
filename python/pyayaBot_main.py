@@ -479,7 +479,7 @@ class Bot():
 					if (user.name == n):
 						user.setIsOp(0)
 
-				pyayaBot_threading.WriteLogMessage(self, "admin", AdminMessage(self.log, "REMOVED OP", n)).join()
+				pyayaBot_threading.WriteLogMessageThread(self, "admin", AdminMessage(self.log, "REMOVED OP", n)).join()
 
 		#self.printOps()
 

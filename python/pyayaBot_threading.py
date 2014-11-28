@@ -3,14 +3,13 @@
 ## This module contains the special thread subclasses used by pyayaBot.
 
 ## TODO [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
-## Merge the 4 addQLPlayerAndSendQLPlayerXThread classes into one class. [ DONE ]
-## Merge the 4 writeToXLogThread classes into one class. [ DONE ]
+## 
 
 ## BUG FIXES
 ## 
 
 ## BACKLOG [ NOT STARTED ], [ IN-PROGRESS ], [ TESTING ] or [ DONE ]
-##
+## 
 
 ## Standard imports
 import threading, time
