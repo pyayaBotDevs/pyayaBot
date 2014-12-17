@@ -98,7 +98,8 @@ class QLRanksFeatureSet():
 				## Update the user's timer for flood protection.
 				elif ((c.level == "USER") and (time.time() - user.last_command_time > self.parent.basic_feature_set.global_cooldown) and (time.time() - user.last_command_time > self.parent.basic_feature_set.user_cooldown)):
 					## QLRANKS LASTGAME COMMAND - Sends info about a player's last played game to the chat.
-					if (re.match("^qlranks\s+lastgame\s+[a-zA-Z0-9_]+$", c.name.lower())):
+					## Reminder that the lastgame methods are still used and logged even though the command was renamed to lastmatch.
+					if (re.match("^qlranks\s+lastmatch\s+[a-zA-Z0-9_]+$", c.name.lower())):
 						pyayaBot_threading.SendQLPlayerInfoThread(self.parent, "lastgame", QLPlayer(self.parent.qlranks_feature_set.parseQLRankPage(self.parent.qlranks_feature_set.getQLPlayerSoup(c.name)))).join()
 
 					## QLRANKS LASTMATCH COMMAND - Sends info about a player's last played match to the chat.

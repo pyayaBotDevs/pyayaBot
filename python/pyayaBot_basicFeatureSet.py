@@ -118,7 +118,7 @@ class BasicFeatureSet():
 
 					## HELP COMMAND - Sends the command reference URL to the chat.
 					elif (re.match("^help$", c.name.lower())):
-						self.parent.sendChatMessage("pyayaBot Command Reference: https://github.com/pyayaBotDevs/pyayaBot/wiki/pyayaBot-Command-Reference")
+						self.parent.sendChatMessage("pyayaBot Command Reference: http://goo.gl/eh41Vu")
 
 					## MOTD COMMAND - Sends the MOTD to the chat.
 					elif (re.match("^motd$", c.name.lower())):
