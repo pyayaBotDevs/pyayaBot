@@ -77,6 +77,8 @@ class BasicFeatureSet():
 						if (re.match("^save\s+channel\s+config$", c.name.lower())):
 							self.saveFeatureSetConfig(c)
 							self.parent.qlranks_feature_set.saveFeatureSetConfig(c)
+	
+							self.parent.sendChatMessage("Channel configuration saved Successfully!!")
 
 					## SET Commands - These commands alter live configuration settings.
 					elif (re.match("^set", c.name.lower())):
@@ -196,7 +198,7 @@ class BasicFeatureSet():
 
 		json.dump(config_json, config_path, indent=4)
 
-		self.parent.sendChatMessage("Successfully saved the Basic Feature Set configuration.")
+		#self.parent.sendChatMessage("Successfully saved the Basic Feature Set configuration.")
 		pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "INFO", "Successfully saved the BasicFeatureSet configuration.")).join()
 
 	## sendMotd - Sends the message of the day to chat.

@@ -403,7 +403,7 @@ class QLRanksFeatureSet():
 
 		json.dump(config_json, config_path, indent=4)
 
-		self.parent.sendChatMessage("Successfully saved the QLRanks Feature Set configuration.")
+		#self.parent.sendChatMessage("Successfully saved the QLRanks Feature Set configuration.")
 		pyayaBot_threading.WriteLogMessageThread(self.parent.log, "system", pyayaBot_main.SystemMessage(self.parent.log, "INFO", "Successfully saved the QLRanksFeatureSet configuration.")).join()
 
 	## sendQLPlayerInfo - Sends info about the  specified player to chat.
