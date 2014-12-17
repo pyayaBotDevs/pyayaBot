@@ -617,8 +617,9 @@ class User():
 	## updateLastCommandTime - Updates the last time a user successfully issued a bot command.
 	## Also resets spam counter. This is used for flood protection.
 	def updateLastCommandTime(self):
-		self.last_command_time = time.time()
-		self.spam_count        = 0
+		if (self.bool_isadmin == 0 and self.bool_isop == 0):
+			self.last_command_time = time.time()
+			self.spam_count        = 0
 
 ## End of Bot.User class
 
