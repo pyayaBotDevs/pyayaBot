@@ -78,7 +78,7 @@ class BasicFeatureSet():
 							self.saveFeatureSetConfig(c)
 							self.parent.qlranks_feature_set.saveFeatureSetConfig(c)
 	
-							self.parent.sendChatMessage("Channel configuration saved Successfully!!")
+							self.parent.sendChatMessage("Successfully saved channel configuration!")
 
 					## SET Commands - These commands alter live configuration settings.
 					elif (re.match("^set", c.name.lower())):
